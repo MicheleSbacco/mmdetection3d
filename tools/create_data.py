@@ -14,6 +14,63 @@ from tools.dataset_converters.create_gt_database import (
 from tools.dataset_converters.update_infos_to_v2 import update_pkl_infos
 
 
+
+# What this whole file does: it parses the arguments and calls a function to create data just for
+#       a specific dataset. In our case it calls the "kitti_data_prep" function with same "root"
+#       and "out" directory, "info_prefix"="extra_tag", no "version" and "with_plane"=False.
+#                                   |
+#                                   |
+#                                   |
+#                                   V
+# The "kitti_data_prep" function does a lot of stuff calling other complex functions:
+#       - "create_kitti_info_file":
+#               - gathers the image indeces from the ".txt" files
+#               - generates "...infos....pkl" files for train,val,trainval,test with another 
+#                 subfunction "get_kitti_image_info"
+#               - the "_calculate_num_points_in_gt" apparently adds in the "annos" field the number 
+#                 of LiDAR points for each instance
+#               - the format of ".pkl" files is in tools/dataset_converters/kitti_data_utils.py
+#                 in the function "get_kitti_image_info"
+#       - "create_reduced_point_cloud":
+#               - starting from ".pkl" files, this function creates folders with reduced point
+#                 clouds 
+#               - the "reduction" is based on the dimensions of the FOV of the camera
+#       - "update_pkl_infos":
+#               - just updates the ".pkl" files to the standard format in OpenMMLab V2.0
+#       - "create_groundtruth_database":
+#               - Creates the dictionary of a dataset and then does DATASETS.build()
+#               - Has a "for" loop for each instance of the dataset, and another "for" loop for
+#                 each bounding box.
+#                 Then creates a file for each single bounding box and puts it into a folder in the
+#                 form of ".bin" files
+#               - Then finally puts all the info inside a ".pkl" file that is distinguished by the 
+#                 "...db_infos....pkl" file name (others were just "...infos...")
+
+
+
+# What we will have to do: create a function that responds to the command 
+#       "python3 tools/create_data.py custom --root-path ./data/custom --out-dir ./data/custom --extra-tag custom"
+#       and creates some ".pkl" files to be used for training
+
+
+
+# Added imports
+from dataset_converters import michele_custom_converter as mcc
+# Added function that resembles "kitti_data_prep" but with LiDAR sensor only.
+# Peculiarities:
+#   - Does not implement the use of the ground, it directly removes it
+#   - Adds a boolean "use_images" that determines if images are processed
+def michele_custom_data_prep(root_path,
+                             info_prefix,
+                             version,
+                             out_dir,
+                             use_images):
+    mcc.create_michele_custom_info_file(root_path, info_prefix, use_images)
+    #if use_images:
+    #    mcc.create_reduced_point_cloud(root_path, info_prefix, use_images)
+
+
+
 def kitti_data_prep(root_path,
                     info_prefix,
                     version,
@@ -312,6 +369,11 @@ parser.add_argument(
     action='store_true',
     help='''Whether to skip saving image and lidar.
         Only used when dataset is Waymo!''')
+parser.add_argument(
+    '--remove-images',
+    action='store_false',
+    default=True,
+    help='''If written, disables images in the creation of ".pkl" files''')
 args = parser.parse_args()
 
 if __name__ == '__main__':
@@ -416,5 +478,12 @@ if __name__ == '__main__':
     elif args.dataset == 'semantickitti':
         semantickitti_data_prep(
             info_prefix=args.extra_tag, out_dir=args.out_dir)
+    elif args.dataset == 'michele_custom':
+        michele_custom_data_prep(
+            root_path=args.root_path,
+            info_prefix=args.extra_tag,
+            version=args.version,
+            out_dir=args.out_dir,
+            use_images=args.remove_images)
     else:
         raise NotImplementedError(f'Don\'t support {args.dataset} dataset.')

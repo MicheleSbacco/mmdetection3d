@@ -115,6 +115,8 @@ class _NumPointsInGTCalculater:
             infos[i] = ret_info
 
 
+
+## Comments directly in "tools/creata_data.py"
 def _calculate_num_points_in_gt(data_path,
                                 infos,
                                 relative_path,
@@ -156,6 +158,8 @@ def _calculate_num_points_in_gt(data_path,
         annos['num_points_in_gt'] = num_points_in_gt.astype(np.int32)
 
 
+
+## Comments directly in "tools/creata_data.py"
 def create_kitti_info_file(data_path,
                            pkl_prefix='kitti',
                            with_plane=False,
@@ -365,6 +369,8 @@ def _create_reduced_point_cloud(data_path,
             points_v.tofile(f)
 
 
+
+## Comments directly in "tools/creata_data.py"
 def create_reduced_point_cloud(data_path,
                                pkl_prefix,
                                train_info_path=None,

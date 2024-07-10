@@ -388,6 +388,8 @@ def update_nuscenes_infos(pkl_path, out_dir):
     mmengine.dump(converted_data_info, out_path, 'pkl')
 
 
+
+## Comments directly in "tools/creata_data.py"
 def update_kitti_infos(pkl_path, out_dir):
     print(f'{pkl_path} will be modified.')
     if out_dir in pkl_path:
@@ -1133,6 +1135,8 @@ def parse_args():
     return args
 
 
+
+## Comments directly in "tools/creata_data.py"
 def update_pkl_infos(dataset, out_dir, pkl_path):
     if dataset.lower() == 'kitti':
         update_kitti_infos(pkl_path=pkl_path, out_dir=out_dir)

@@ -163,6 +163,8 @@ def _extend_matrix(mat):
     return mat
 
 
+
+## Comments directly in "tools/creata_data.py"
 def get_kitti_image_info(path,
                          training=True,
                          label_info=True,
