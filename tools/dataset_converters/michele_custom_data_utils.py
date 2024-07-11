@@ -209,6 +209,8 @@ def get_michele_custom_image_info(path,
         pc_info = {'num_features': 4}
         calib_info = {}
         image_info = {'image_idx': idx}
+        pc_info['pc_idx'] = idx                                                     ##  When working with only point clouds, still need to
+                                                                                    #   store the index in some way
         annotations = None
         # Update the "pc" and "image" dictionaries with the right paths
         if velodyne:

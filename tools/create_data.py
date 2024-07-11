@@ -60,14 +60,43 @@ from dataset_converters import michele_custom_converter as mcc
 # Peculiarities:
 #   - Does not implement the use of the ground, it directly removes it
 #   - Adds a boolean "use_images" that determines if images are processed
+#                           |
+#                           |
+#                           V
+# TODO: Why not directly convert to the right format?
 def michele_custom_data_prep(root_path,
                              info_prefix,
                              version,
                              out_dir,
                              use_images):
+    
+    # Create the ".pkl" files
     mcc.create_michele_custom_info_file(root_path, info_prefix, use_images)
-    #if use_images:
-    #    mcc.create_reduced_point_cloud(root_path, info_prefix, use_images)
+    
+    # Create the "reduced" point clouds, only if use images
+    if use_images:                                                                              ## Used the "use_images" boolean here
+        mcc.create_michele_custom_reduced_point_cloud(root_path, info_prefix)
+
+    # Based on the "use_images" boolean, give the dataset an appropriate name.
+    # The function "update_pkl_infos" below updates the data from "kitti.pkl" format to "MMLab.pkl" format
+    if use_images: dataset_for_update = 'custom_images'                                         ## Used the "use_images" boolean here
+    else: dataset_for_update = 'custom_NO_IMAGES'
+    # For the TRAINING:
+    #   1. Create the path for the updated ".pkl" file (already existing but in "wrong format")
+    #   2. Update the data using the dedicated function
+    info_train_path = osp.join(out_dir, f'{info_prefix}_infos_train.pkl')
+    update_pkl_infos(dataset_for_update, out_dir, info_train_path)                                  ## Uses a complex function in "update_infos_to_v2"
+    # Same for VAL
+    info_val_path = osp.join(out_dir, f'{info_prefix}_infos_val.pkl')
+    update_pkl_infos(dataset_for_update, out_dir, info_val_path)                                    ## Same
+    # Same for TRAIN-VAL
+    info_trainval_path = osp.join(out_dir, f'{info_prefix}_infos_trainval.pkl')
+    update_pkl_infos(dataset_for_update, out_dir=out_dir, pkl_path=info_trainval_path)              ## Same
+    # Same for TEST
+    info_test_path = osp.join(out_dir, f'{info_prefix}_infos_test.pkl')
+    update_pkl_infos(dataset_for_update, out_dir=out_dir, pkl_path=info_test_path)                  ## Same
+    
+    # TODO: Last step of the "ground_truth" database
 
 
 
