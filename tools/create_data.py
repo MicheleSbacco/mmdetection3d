@@ -10,7 +10,7 @@ from tools.dataset_converters import lyft_converter as lyft_converter
 from tools.dataset_converters import nuscenes_converter as nuscenes_converter
 from tools.dataset_converters import semantickitti_converter
 from tools.dataset_converters.create_gt_database import (
-    GTDatabaseCreater, create_groundtruth_database)
+    GTDatabaseCreater, create_groundtruth_database, create_michele_custom_groundtruth_database)
 from tools.dataset_converters.update_infos_to_v2 import update_pkl_infos
 
 
@@ -79,8 +79,8 @@ def michele_custom_data_prep(root_path,
 
     # Based on the "use_images" boolean, give the dataset an appropriate name.
     # The function "update_pkl_infos" below updates the data from "kitti.pkl" format to "MMLab.pkl" format
-    if use_images: dataset_for_update = 'custom_images'                                         ## Used the "use_images" boolean here
-    else: dataset_for_update = 'custom_NO_IMAGES'
+    if use_images: dataset_for_update = 'michele_custom_images'                                         ## Used the "use_images" boolean here
+    else: dataset_for_update = 'michele_custom_NO_IMAGES'
     # For the TRAINING:
     #   1. Create the path for the updated ".pkl" file (already existing but in "wrong format")
     #   2. Update the data using the dedicated function
@@ -95,8 +95,15 @@ def michele_custom_data_prep(root_path,
     # Same for TEST
     info_test_path = osp.join(out_dir, f'{info_prefix}_infos_test.pkl')
     update_pkl_infos(dataset_for_update, out_dir=out_dir, pkl_path=info_test_path)                  ## Same
-    
-    # TODO: Last step of the "ground_truth" database
+     
+    # Function that creates the ground-truth ".pkl" file, and all the gt-files about each single instance
+    if use_images: image_str="YesImages"
+    else: image_str="NoImages"
+    create_michele_custom_groundtruth_database(
+        'MicheleCustomDataset'+image_str,
+        root_path,
+        info_prefix,
+        f'{info_prefix}_infos_train.pkl')
 
 
 

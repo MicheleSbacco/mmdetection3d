@@ -240,7 +240,8 @@ def generate_kitti_camera_instances(ori_info_dict):
 def update_michele_custom_infos(pkl_path, out_dir, use_images=True):
     
     # My additional boolean for testing
-    keep_calib = False
+    keep_calib = True                                           ##  Apparently needs to be true, otherwise the "create_gt_database" 
+                                                                #   gives back an error. (deep functions in mmengine)
 
     # Just some warning prints
     print(f'{pkl_path} will be modified.')
@@ -1340,9 +1341,9 @@ def update_pkl_infos(dataset, out_dir, pkl_path):
         update_nuscenes_infos(pkl_path=pkl_path, out_dir=out_dir)
     elif dataset.lower() == 's3dis':
         update_s3dis_infos(pkl_path=pkl_path, out_dir=out_dir)
-    elif dataset == 'custom_images':
+    elif dataset == 'michele_custom_images':
         update_michele_custom_infos(pkl_path, out_dir)
-    elif dataset == 'custom_NO_IMAGES':
+    elif dataset == 'michele_custom_NO_IMAGES':
         update_michele_custom_infos(pkl_path, out_dir, use_images=False)
     else:
         raise NotImplementedError(f'Do not support convert {dataset} to v2.')
