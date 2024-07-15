@@ -138,7 +138,8 @@ def create_michele_custom_groundtruth_database(dataset_class_name,
                                                                 #   for fusion I will need it True
         ),
         data_prefix=dict(
-            pts='training/velodyne_reduced'
+            pts='training/velodyne'                             ## If not images, use "velodyne" point cloud (original one), not the
+                                                                #  reduced one at "velodyne_reduced"
         ),
         pipeline=[
             dict(
