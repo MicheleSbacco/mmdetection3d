@@ -1,6 +1,12 @@
+## Changes made: modified folder and ".pkl" files name, to adapt to the new "michele_custom" prefix
+
+## Still, uses "velodyne_reduced" because it is used if "use_images"=True
+
+
+
 # dataset settings
 dataset_type = 'KittiDataset'
-data_root = 'data/kitti/'
+data_root = 'data/michele_custom/'
 class_names = ['Car']
 point_cloud_range = [0, -40, -3, 70.4, 40, 1]
 input_modality = dict(use_lidar=True, use_camera=False)
@@ -23,9 +29,11 @@ backend_args = None
 
 db_sampler = dict(
     data_root=data_root,
-    info_path=data_root + 'kitti_dbinfos_train.pkl',
+    info_path=data_root + 'michele_custom_dbinfos_train.pkl',
     rate=1.0,
-    prepare=dict(filter_by_difficulty=[-1], filter_by_min_points=dict(Car=5)),
+    prepare=dict(
+        filter_by_difficulty=[-1], 
+        filter_by_min_points=dict(Car=5)),
     classes=class_names,
     sample_groups=dict(Car=15),
     points_loader=dict(
@@ -109,7 +117,7 @@ train_dataloader = dict(
         dataset=dict(
             type=dataset_type,
             data_root=data_root,
-            ann_file='kitti_infos_train.pkl',
+            ann_file='michele_custom_infos_train.pkl',
             data_prefix=dict(pts='training/velodyne_reduced'),
             pipeline=train_pipeline,
             modality=input_modality,
@@ -129,7 +137,7 @@ val_dataloader = dict(
         type=dataset_type,
         data_root=data_root,
         data_prefix=dict(pts='training/velodyne_reduced'),
-        ann_file='kitti_infos_val.pkl',
+        ann_file='michele_custom_infos_val.pkl',
         pipeline=test_pipeline,
         modality=input_modality,
         test_mode=True,
@@ -146,7 +154,7 @@ test_dataloader = dict(
         type=dataset_type,
         data_root=data_root,
         data_prefix=dict(pts='training/velodyne_reduced'),
-        ann_file='kitti_infos_val.pkl',
+        ann_file='michele_custom_infos_val.pkl',
         pipeline=test_pipeline,
         modality=input_modality,
         test_mode=True,
@@ -155,7 +163,7 @@ test_dataloader = dict(
         backend_args=backend_args))
 val_evaluator = dict(
     type='KittiMetric',
-    ann_file=data_root + 'kitti_infos_val.pkl',
+    ann_file=data_root + 'michele_custom_infos_val.pkl',
     metric='bbox',
     backend_args=backend_args)
 test_evaluator = val_evaluator
