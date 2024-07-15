@@ -240,8 +240,11 @@ def generate_kitti_camera_instances(ori_info_dict):
 def update_michele_custom_infos(pkl_path, out_dir, use_images=True):
     
     # My additional boolean for testing
-    keep_calib = True                                           ##  Apparently needs to be true, otherwise the "create_gt_database" 
-                                                                #   gives back an error. (deep functions in mmengine)
+    keep_calib = False                              ##  Depends on which dataset will be used for the creation of the database in the
+                                                    #   function "create_gt_database.py".
+                                                    #   Versions of datasets can be found in the folder "mmdet3d/datasets".
+                                                    #   If set to "False" and use "KittiDataset" does not work because KITTI tries to
+                                                    #   convert the LiDAR point-cloud to camera frame for some reason.
 
     # Just some warning prints
     print(f'{pkl_path} will be modified.')

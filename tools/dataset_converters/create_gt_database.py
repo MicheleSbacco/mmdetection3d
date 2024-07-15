@@ -120,14 +120,16 @@ def create_michele_custom_groundtruth_database(dataset_class_name,
                                                used_classes=None,
                                                database_save_path=None,
                                                db_info_save_path=None):
-    
+
     # Just a warning print
     print(f'Create GT Database of {dataset_class_name}')
-    
-    # Create a dataset configuration that will be used to build a dataset
+
+    # Create a dataset configuration that will be used to build a dataset.
+    #   - If need to use images, just make really similar to Kitti (just some peculiarities as
+    #     explained above)
+    #   - Otherwise, use the custom dataset in "mmdet3d/datasets"
     dataset_cfg = dict(
-        type='KittiDataset',                                    ##  For now nee to use KITTI, otherwise error from the building function in
-                                                                #   "mmengine".
+        type=dataset_class_name,
         data_root=data_path, 
         ann_file=info_path,
         modality=dict(
@@ -152,8 +154,8 @@ def create_michele_custom_groundtruth_database(dataset_class_name,
                 backend_args=None)
         ]
     )
-    # Update the configuration if need to use images
-    if "YesImages" in dataset_class_name:
+    # Update the configuration if need to use images (essentially, just make it same as KITTI preparation)
+    if "Kitti" in dataset_class_name:
         dataset_cfg.update(
             data_prefix=dict(
                 pts='training/velodyne_reduced', img='training/image_2'

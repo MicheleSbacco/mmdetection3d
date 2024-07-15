@@ -95,12 +95,14 @@ def michele_custom_data_prep(root_path,
     # Same for TEST
     info_test_path = osp.join(out_dir, f'{info_prefix}_infos_test.pkl')
     update_pkl_infos(dataset_for_update, out_dir=out_dir, pkl_path=info_test_path)                  ## Same
-     
+
     # Function that creates the ground-truth ".pkl" file, and all the gt-files about each single instance
-    if use_images: image_str="YesImages"
-    else: image_str="NoImages"
+    #   - If use images, essentially the same as KittiDataset so we just use that one
+    #   - If not using them, need to take the custom dataset
+    if use_images: dataset_name="KittiDataset"
+    else: dataset_name="MicheleCustomDatasetNoImages"
     create_michele_custom_groundtruth_database(
-        'MicheleCustomDataset'+image_str,
+        dataset_name,
         root_path,
         info_prefix,
         f'{info_prefix}_infos_train.pkl')

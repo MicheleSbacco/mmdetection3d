@@ -25,8 +25,16 @@ from .transforms import (AffineResize, BackgroundPointsFilter, GlobalAlignment,
 from .utils import get_loading_pipeline
 from .waymo_dataset import WaymoDataset
 
+
+
+## Added import for new custom dataset
+from .michele_custom_dataset_no_images import MicheleCustomDatasetNoImages
+
+
+
+# Here added my new custom dataset
 __all__ = [
-    'KittiDataset', 'CBGSDataset', 'NuScenesDataset', 'LyftDataset',
+    'MicheleCustomDatasetNoImages', 'KittiDataset', 'CBGSDataset', 'NuScenesDataset', 'LyftDataset',
     'ObjectSample', 'RandomFlip3D', 'ObjectNoise', 'GlobalRotScaleTrans',
     'PointShuffle', 'ObjectRangeFilter', 'PointsRangeFilter',
     'LoadPointsFromFile', 'S3DISSegDataset', 'S3DISDataset',
