@@ -29,6 +29,7 @@ import mmengine
 from mmdet3d.registry import DATASETS
 from .det3d_dataset import Det3DDataset
 from mmdet3d.structures.bbox_3d.lidar_box3d import LiDARInstance3DBoxes
+from mmdet3d.structures.bbox_3d.cam_box3d import CameraInstance3DBoxes
 
 ## Added imports
 import numpy as np
@@ -70,6 +71,19 @@ class MicheleCustomDatasetNoImages(Det3DDataset):
 
         # filter the gt classes not used in training
         ann_info = self._remove_dontcare(ann_info)
-        gt_bboxes_3d = LiDARInstance3DBoxes(ann_info['gt_bboxes_3d'])
+
+
+
+        # Normally would do 
+        #   "gt_bboxes_3d = LiDARInstance3DBoxes(ann_info['gt_bboxes_3d'])"
+        # but then the visualization fucks up (cars start flying). So need to do the conversion using
+        # the calibration data.
+
+
+        
+        lidar2cam = np.array(info['images']['CAM2']['lidar2cam'])
+        gt_bboxes_3d = CameraInstance3DBoxes(
+            ann_info['gt_bboxes_3d']).convert_to(self.box_mode_3d,
+                                                 np.linalg.inv(lidar2cam))
         ann_info['gt_bboxes_3d'] = gt_bboxes_3d
         return ann_info
