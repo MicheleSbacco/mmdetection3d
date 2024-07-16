@@ -1,7 +1,7 @@
-voxel_size = [0.16, 0.16, 4]
+##  Copied file:
+#   exact copy of the file "pointpillars_hv_secfpn_kitti.py" because actually it's the same dataset but with no images
 
-# Comment on the point cloud range arguments
-# point_cloud_range=[min_ahead, min_sidways, min_height, max_ahead, max_sideways, max_height]
+voxel_size = [0.16, 0.16, 4]
 
 model = dict(
     type='VoxelNet',
