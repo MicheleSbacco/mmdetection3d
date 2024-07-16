@@ -38,7 +38,7 @@ train_pipeline = [
         use_dim=4,
         backend_args=backend_args),
     dict(type='LoadAnnotations3D', with_bbox_3d=True, with_label_3d=True),
-    dict(type='ObjectSample', db_sampler=db_sampler, use_ground_plane=True),
+    dict(type='ObjectSample', db_sampler=db_sampler, use_ground_plane=False),
     dict(type='RandomFlip3D', flip_ratio_bev_horizontal=0.5),
     dict(
         type='GlobalRotScaleTrans',
@@ -77,13 +77,21 @@ test_pipeline = [
 ]
 
 train_dataloader = dict(
+    batch_size = 5,
+    num_workers = 5,
     dataset=dict(dataset=dict(pipeline=train_pipeline, metainfo=metainfo)))
-test_dataloader = dict(dataset=dict(pipeline=test_pipeline, metainfo=metainfo))
-val_dataloader = dict(dataset=dict(pipeline=test_pipeline, metainfo=metainfo))
+test_dataloader = dict(
+    batch_size = 1,
+    num_workers = 1,
+    dataset=dict(pipeline=test_pipeline, metainfo=metainfo))
+val_dataloader = dict(
+    batch_size = 1,
+    num_workers = 1,
+    dataset=dict(pipeline=test_pipeline, metainfo=metainfo))
 # In practice PointPillars also uses a different schedule
 # optimizer
 lr = 0.001
-epoch_num = 80
+epoch_num = 20
 optim_wrapper = dict(
     optimizer=dict(lr=lr), clip_grad=dict(max_norm=35, norm_type=2))
 param_scheduler = [
