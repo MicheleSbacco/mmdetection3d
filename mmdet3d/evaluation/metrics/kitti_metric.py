@@ -346,8 +346,8 @@ class KittiMetric(BaseMetric):
             info = self.data_infos[sample_idx]
             # Here default used 'CAM2' to compute metric. If you want to
             # use another camera, please modify it.
-            image_shape = (info['images'][self.default_cam_key]['height'],
-                           info['images'][self.default_cam_key]['width'])
+            # image_shape = (info['images'][self.default_cam_key]['height'],
+            #                info['images'][self.default_cam_key]['width'])
             box_dict = self.convert_valid_bboxes(pred_dicts, info)
             anno = {
                 'name': [],
@@ -371,7 +371,8 @@ class KittiMetric(BaseMetric):
                 for box, box_lidar, bbox, score, label in zip(
                         box_preds, box_preds_lidar, box_2d_preds, scores,
                         label_preds):
-                    bbox[2:] = np.minimum(bbox[2:], image_shape[::-1])
+                    # bbox[2:] = np.minimum(bbox[2:], image_shape[::-1])
+                    bbox[2:] = bbox[2:]
                     bbox[:2] = np.maximum(bbox[:2], [0, 0])
                     anno['name'].append(class_names[int(label)])
                     anno['truncated'].append(0.0)
@@ -597,8 +598,8 @@ class KittiMetric(BaseMetric):
                 np.float32)
         P2 = np.array(info['images'][self.default_cam_key]['cam2img']).astype(
             np.float32)
-        img_shape = (info['images'][self.default_cam_key]['height'],
-                     info['images'][self.default_cam_key]['width'])
+        # img_shape = (info['images'][self.default_cam_key]['height'],
+        #              info['images'][self.default_cam_key]['width'])
         P2 = box_preds.tensor.new_tensor(P2)
 
         if isinstance(box_preds, LiDARInstance3DBoxes):
@@ -617,18 +618,20 @@ class KittiMetric(BaseMetric):
         box_2d_preds = torch.cat([minxy, maxxy], dim=1)
         # Post-processing
         # check box_preds_camera
-        image_shape = box_preds.tensor.new_tensor(img_shape)
-        valid_cam_inds = ((box_2d_preds[:, 0] < image_shape[1]) &
-                          (box_2d_preds[:, 1] < image_shape[0]) &
-                          (box_2d_preds[:, 2] > 0) & (box_2d_preds[:, 3] > 0))
+        # image_shape = box_preds.tensor.new_tensor(img_shape)
+        # valid_cam_inds = ((box_2d_preds[:, 0] < image_shape[1]) &
+        #                   (box_2d_preds[:, 1] < image_shape[0]) &
+        #                   (box_2d_preds[:, 2] > 0) & (box_2d_preds[:, 3] > 0))
         # check box_preds_lidar
         if isinstance(box_preds, LiDARInstance3DBoxes):
             limit_range = box_preds.tensor.new_tensor(self.pcd_limit_range)
             valid_pcd_inds = ((box_preds_lidar.center > limit_range[:3]) &
                               (box_preds_lidar.center < limit_range[3:]))
-            valid_inds = valid_cam_inds & valid_pcd_inds.all(-1)
+            # valid_inds = valid_cam_inds & valid_pcd_inds.all(-1)
+            valid_inds = valid_pcd_inds.all(-1)
         else:
-            valid_inds = valid_cam_inds
+            # valid_inds = valid_cam_inds
+            valid_inds = None
 
         if valid_inds.sum() > 0:
             return dict(
