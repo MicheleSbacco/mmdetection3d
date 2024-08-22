@@ -305,7 +305,7 @@ def update_michele_custom_infos(pkl_path, out_dir, use_images=True):
             temp_data_info['images']['CAM3']['cam2img'] = ori_info_dict['calib'][
                 'P3'].tolist()
 
-        # Assign the image path and shape. Assign the lidar path and number of points.
+        # Assign the image path and shape. Assign the lidar path and number of features.
         if use_images:                                                                                              ## Booleans
             temp_data_info['images']['CAM2']['img_path'] = Path(ori_info_dict['image']['image_path']).name
             h, w = ori_info_dict['image']['image_shape']
