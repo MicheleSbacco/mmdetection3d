@@ -109,6 +109,10 @@ def crop_image_patch(pos_proposals, gt_masks, pos_assigned_gt_inds, org_img):
 
 
 
+'''
+######################################### CUSTOM KITTI ##########################################
+'''
+
 # Copied function from "create_groundtruth_database"
 # Peculiarities:
 #   - Suppresses all the unused arguments("relative_path", "add_rgb", "lidar_only", "bev_only", "coors_range")
@@ -258,6 +262,165 @@ def create_michele_custom_groundtruth_database(dataset_class_name,
 
     with open(db_info_save_path, 'wb') as f:
         pickle.dump(all_db_infos, f)
+
+
+
+'''
+######################################### MINERVA POLIMOVE ##########################################
+'''
+
+# Copied function from "create_groundtruth_database"
+# Peculiarities:
+#   - Suppresses all the unused arguments("relative_path", "add_rgb", "lidar_only", "bev_only", "coors_range")
+#   - Suppresses the mask-related arguments ("mask_anno_path", "with_mask")
+def create_michele_custom_groundtruth_database(dataset_class_name,
+                                               data_path,
+                                               info_prefix,
+                                               info_path=None,
+                                               used_classes=None,
+                                               database_save_path=None,
+                                               db_info_save_path=None):
+
+    # Just a warning print
+    print(f'Create GT Database of {dataset_class_name}')
+
+    # Create a dataset configuration that will be used to build a dataset.
+    #   - If need to use images, just make really similar to Kitti (just some peculiarities as
+    #     explained above)
+    #   - Otherwise, use the custom dataset in "mmdet3d/datasets"
+    dataset_cfg = dict(
+        type=dataset_class_name,
+        data_root=data_path, 
+        ann_file=info_path,
+        modality=dict(
+            use_lidar=True,
+            use_camera=False,                                   ##  With kitti was enabled just in case of segmentation mask. Probably
+                                                                #   for fusion I will need it True
+        ),
+        data_prefix=dict(
+            pts='training/velodyne'                             ## If not images, use "velodyne" point cloud (original one), not the
+                                                                #  reduced one at "velodyne_reduced"
+        ),
+        pipeline=[
+            dict(
+                type='LoadPointsFromFile',
+                coord_type='LIDAR',
+                load_dim=4,
+                use_dim=4,
+                backend_args=None),
+            dict(
+                type='LoadAnnotations3D',
+                with_bbox_3d=True,
+                with_label_3d=True,
+                backend_args=None)
+        ]
+    )
+    # Update the configuration if need to use images (essentially, just make it same as KITTI preparation)
+    if "Kitti" in dataset_class_name:
+        dataset_cfg.update(
+            data_prefix=dict(
+                pts='training/velodyne_reduced', img='training/image_2'
+            ),
+            modality=dict(
+                use_lidar=True,
+                use_camera=False,
+            )
+        )
+    # Build the dataset with mmengine
+    dataset = DATASETS.build(dataset_cfg)
+
+    # Create names for:
+    #   - GT Database (instance by instance)
+    #   - GT Pickle File
+    if database_save_path is None:
+        database_save_path = osp.join(data_path, f'{info_prefix}_gt_database')
+    if db_info_save_path is None:
+        db_info_save_path = osp.join(data_path,
+                                     f'{info_prefix}_dbinfos_train.pkl')
+    mmengine.mkdir_or_exist(database_save_path)
+    all_db_infos = dict()
+
+    # Variable needed to track "categories" in case they are not made explicit              ##  In our case we don't make them explicit, but if
+                                                                                            #   needed can be passed to the function with the 
+                                                                                            #   argument "used_classes"
+    group_counter = 0
+    # For loop: does the "images" (or scans) one by one
+    for j in track_iter_progress(list(range(len(dataset)))):
+        
+        # Differences between "data_info" and "example" (from ChatGPT):
+        #   - Second one has less repetitions
+        #   - Second one has directly the point cloud in the form of a tensor
+        #   - Both have some data from "calib"!!!
+        #   - Examples at the end of function
+        data_info = dataset.get_data_info(j)
+        example = dataset.pipeline(data_info)
+        
+        # Get some various info from the "example" dictionary
+        annos = example['ann_info']
+        sample_idx = example['sample_idx']                                                   ##  Not really an image, but the sample number (also 
+                                                                                            #   present in the point-cloud after modifications)
+        points = example['points'].numpy()
+        gt_boxes_3d = annos['gt_bboxes_3d'].numpy()
+        names = [dataset.metainfo['classes'][i] for i in annos['gt_labels_3d']]
+        difficulty = np.zeros(gt_boxes_3d.shape[0], dtype=np.int32)
+        if 'difficulty' in annos:
+            difficulty = annos['difficulty']
+
+        # This is the dictionary that stores the group types if "used_classes" argument is None
+        group_dict = dict()
+        # If "group_ids" not present in "annos" (in our case, NOT present) there is a "group_id" for each singe bbox in the image/scan
+        if 'group_ids' in annos:
+            group_ids = annos['group_ids']
+        else:
+            group_ids = np.arange(gt_boxes_3d.shape[0], dtype=np.int64)
+
+        # Take the number of bboxes, and points in the point cloud for each bbox
+        num_obj = gt_boxes_3d.shape[0]
+        point_indices = box_np_ops.points_in_rbbox(points, gt_boxes_3d)
+        # For loop: does one by one the bboxes of the single image/scan (loop in the loop)
+        for i in range(num_obj):
+            filename = f'{sample_idx}_{names[i]}_{i}.bin'
+            abs_filepath = osp.join(database_save_path, filename)
+            rel_filepath = osp.join(f'{info_prefix}_gt_database', filename)
+
+            # save point clouds and image patches for each object
+            gt_points = points[point_indices[:, i]]
+            gt_points[:, :3] -= gt_boxes_3d[i, :3]
+
+            with open(abs_filepath, 'w') as f:
+                gt_points.tofile(f)
+
+            if (used_classes is None) or names[i] in used_classes:
+                db_info = {
+                    'name': names[i],
+                    'path': rel_filepath,
+                    'image_idx': sample_idx,
+                    'gt_idx': i,
+                    'box3d_lidar': gt_boxes_3d[i],
+                    'num_points_in_gt': gt_points.shape[0],
+                    'difficulty': difficulty[i],
+                }
+                local_group_id = group_ids[i]
+                # if local_group_id >= 0:
+                if local_group_id not in group_dict:
+                    group_dict[local_group_id] = group_counter
+                    group_counter += 1
+                db_info['group_id'] = group_dict[local_group_id]
+                if 'score' in annos:
+                    db_info['score'] = annos['score'][i]
+                if names[i] in all_db_infos:
+                    all_db_infos[names[i]].append(db_info)
+                else:
+                    all_db_infos[names[i]] = [db_info]
+
+    for k, v in all_db_infos.items():
+        print(f'load {len(v)} {k} database infos')
+
+    with open(db_info_save_path, 'wb') as f:
+        pickle.dump(all_db_infos, f)
+
+
+
 
 
 

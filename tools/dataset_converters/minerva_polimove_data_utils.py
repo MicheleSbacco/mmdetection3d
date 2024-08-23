@@ -86,12 +86,14 @@ def get_calib_path(idx,
 
 
 ######################################### ATTENTION ##########################################
-# Function has been deeply modified to be compliant with the reduced number of information
-# that is available for the POLIMOVE dataset.
+# Function has been deeply modified to be compliant with the reduced number of information that is available for
+# the POLIMOVE dataset.
+# Also, the parameter "use_images" has been added because the field "bbox" (pixels of the image corresponding to
+# the bbox corners) could be useful in case of image use.
 #
 # For information about the fields/what they mean/etc, see file "create_data.py" and search "More info about the data processing".
 
-def get_label_anno(label_path):
+def get_label_anno(label_path, use_images=False):
     # Create an empty instance of the "annotations" dictionary
     annotations = {}
     annotations.update({
@@ -124,14 +126,24 @@ def get_label_anno(label_path):
         annotations['location'][i][0] = new_x
         annotations['location'][i][1] = new_y
         annotations['location'][i][2] = new_z
-    # Take the rotation in degrees (POLIMOVE) and turn it into radians (KittiCamera) TODO: Check that the sign is right (one axis upward, other one downward)
+    # Take the rotation in degrees (POLIMOVE) and turn it into radians (KittiCamera)    TODO: Check that the sign is right (one axis upward, other one downward)
+    #                                                                                   TODO: If I do not manipulate the pointcloud, why should I change the bboxes?
     annotations['rotation_y'] = np.array([float(x[7])*(math.pi/180)
                                           for x in content]).reshape(-1)
     # Create this two "strange" values TODO: Understand what are they needed for
     index = list(range(num_objects)) + [-1] * (num_gt - num_objects)
     annotations['index'] = np.array(index, dtype=np.int32)
     annotations['group_ids'] = np.arange(num_gt, dtype=np.int32)
+    # Just if images are used, add a field "bbox" to the annotations. For more info read the disclaimer before the
+    # name of the function. 
+    # TODO: assign the number of the fields according to what SUSTechPoints says and assigns
+    if use_images:
+        annotations.update({'bbox':[]})
+        annotations['bbox'] = np.array([[float(info) for info in x[boh_riguarda1:boh_riguarda2]]
+                                    for x in content]).reshape(-1, 4)
     return annotations
+
+
 
 def _extend_matrix(mat):
     mat = np.concatenate([mat, np.array([[0., 0., 0., 1.]])], axis=0)
@@ -244,7 +256,7 @@ def get_minerva_polimove_image_info(path,
             if relative_path:
                 label_path = str(root_path / label_path)
             # Here, add all the needed annotations with the specified function
-            annotations = get_label_anno(label_path)
+            annotations = get_label_anno(label_path, use_images=use_images)
         
         # Add the "image","pc_info" dictionaries to the main "info" dictionary
         if use_images:                                                                          ## Used the "use_images" boolean here

@@ -139,6 +139,8 @@ def michele_custom_data_prep(root_path,
 
 # Added import with the new data converter (specific for POLIMOVE data)
 from dataset_converters import minerva_polimove_converter as mpc
+# Just needed when debugging to stop the process
+import time
 
 
 # Added function that resembles "kitti_data_prep" but for Minerva custom data. 
@@ -164,43 +166,34 @@ def minerva_polimove_data_prep(root_path,
     # Create the ".pkl" files
     mpc.create_minerva_polimove_info_file(root_path, info_prefix, use_images)
     
-    # Create the "reduced" point clouds, only if use images
+    # Create the "reduced" point clouds, only if use images. TODO: Define appropriate function for images when needed
     if use_images:                                                                              ## Used the "use_images" boolean here
         mpc.create_minerva_polimove_reduced_point_cloud(root_path, info_prefix)
 
     # Based on the "use_images" boolean, give the dataset an appropriate name.
-    # The function "update_pkl_infos" below updates the data from "kitti.pkl" format to "MMLab.pkl" format
+    # The function "update_pkl_infos" updates the data from "kitti.pkl" format to "MMLab.pkl" format
     if use_images: minerva_dataset_choice = 'minerva_polimove_cameralidar'                                     ## Used the "use_images" boolean here
     else: minerva_dataset_choice = 'minerva_polimove_lidaronly'
     # For the TRAINING:
     #   1. Create the path for the updated ".pkl" file (already existing but in "wrong format")
     #   2. Update the data using the dedicated function
-    
-    
-    
-
-    '''TODO: Arrivato fino a qui a cambiare i nomi, continua da qui'''
-
-
-    
-    
     info_train_path = osp.join(out_dir, f'{info_prefix}_infos_train.pkl')
-    update_pkl_infos(minerva_dataset_choice, out_dir, info_train_path)                                  ## Uses a complex function in "update_infos_to_v2"
+    update_pkl_infos(minerva_dataset_choice, out_dir, info_train_path)
     # Same for VAL
     info_val_path = osp.join(out_dir, f'{info_prefix}_infos_val.pkl')
-    update_pkl_infos(minerva_dataset_choice, out_dir, info_val_path)                                    ## Same
+    update_pkl_infos(minerva_dataset_choice, out_dir, info_val_path)
     # Same for TRAIN-VAL
     info_trainval_path = osp.join(out_dir, f'{info_prefix}_infos_trainval.pkl')
-    update_pkl_infos(minerva_dataset_choice, out_dir=out_dir, pkl_path=info_trainval_path)              ## Same
+    update_pkl_infos(minerva_dataset_choice, out_dir=out_dir, pkl_path=info_trainval_path)
     # Same for TEST
     info_test_path = osp.join(out_dir, f'{info_prefix}_infos_test.pkl')
-    update_pkl_infos(minerva_dataset_choice, out_dir=out_dir, pkl_path=info_test_path)                  ## Same
-
+    update_pkl_infos(minerva_dataset_choice, out_dir=out_dir, pkl_path=info_test_path)
+    
     # Function that creates the ground-truth ".pkl" file, and all the gt-files about each single instance
     #   - If use images, essentially the same as KittiDataset so we just use that one
     #   - If not using them, need to take the custom dataset
-    if use_images: dataset_name="KittiDataset"
-    else: dataset_name="MicheleCustomDatasetNoImages"
+    if use_images: dataset_name="minerva_polimove_cameralidar"
+    else: dataset_name="minerva_polimove_lidaronly"
     create_michele_custom_groundtruth_database(
         dataset_name,
         root_path,

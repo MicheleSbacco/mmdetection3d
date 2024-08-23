@@ -13,17 +13,6 @@ from .minerva_polimove_data_utils import get_minerva_polimove_image_info
 from .nuscenes_converter import post_process_coords
 
 
-
-
-
-
-import time
-
-
-
-
-
-
 # Copied function: reads the indeces from the ".txt" files
 def _read_imageset_file(path):
     with open(path, 'r') as f:
@@ -41,14 +30,6 @@ def _calculate_num_points_in_gt(data_path,
                                 use_images,
                                 remove_outside=True,
                                 num_features=4):
-    
-    
-    
-    min_number = 1e10
-    max_number = 0
-    
-    
-    
     
     for info in mmengine.track_iter_progress(infos):
         # Initialize the processing of the point-cloud
@@ -88,40 +69,14 @@ def _calculate_num_points_in_gt(data_path,
         else:
             gt_boxes = gt_boxes_camera
         # Count the number of LiDAR points in the point-cloud
-        indices = box_np_ops.points_in_rbbox(points_v[:, :3], gt_boxes, origin=(1, 1, 1))
+        indices = box_np_ops.points_in_rbbox(points_v[:, :3], gt_boxes)
         num_points_in_gt = indices.sum(0)
-        
-
-
-        
-        
-
-        print("\n\tnum_points_in_gt: %s" %num_points_in_gt)
-        if len(num_points_in_gt)!=0:
-            if num_points_in_gt.min()<min_number:
-                min_number = num_points_in_gt.min()
-            if num_points_in_gt.max()>max_number:
-                max_number = num_points_in_gt.max()
-
-
-        
-        
-        
         # Just add a "-1" for the instances of "Don't Care" class
         num_ignored = len(annos['dimensions']) - num_obj
         num_points_in_gt = np.concatenate(
             [num_points_in_gt, -np.ones([num_ignored])])
         # Finally add the new key to the "annotations" dictionary
         annos['num_points_in_gt'] = num_points_in_gt.astype(np.int32)
-    
-    
-
-
-
-    print()
-    print(min_number)
-    print(max_number)
-    print()
 
 
 
@@ -158,15 +113,15 @@ def create_minerva_polimove_info_file(data_path,
         calib=True,
         image_ids=train_img_ids,
         relative_path=relative_path)
-    # Add the number of LiDAR points for each instance in the "annos" field
-    _calculate_num_points_in_gt(data_path, minerva_polimove_infos_train, relative_path, use_images)
+    # Add the number of LiDAR points for each instance in the "annos" field. 
+    _calculate_num_points_in_gt(data_path, minerva_polimove_infos_train, relative_path, use_images)         ## TODO: Check why it does not work
     # Save the dictionary on the related ".pkl" file
     filename = save_path / f'{pkl_prefix}_infos_train.pkl'
     print(f'{pkl_prefix} info train file is saved to {filename}')
-    mmengine.dump(michele_custom_infos_train, filename)
+    mmengine.dump(minerva_polimove_infos_train, filename)
 
     # Do the same for VAL files
-    michele_custom_infos_val = get_michele_custom_image_info(
+    minerva_polimove_infos_val = get_minerva_polimove_image_info(
         data_path,
         use_images,
         training=True,
@@ -174,20 +129,20 @@ def create_minerva_polimove_info_file(data_path,
         calib=True,
         image_ids=val_img_ids,
         relative_path=relative_path)
-    _calculate_num_points_in_gt(data_path, michele_custom_infos_val, relative_path, use_images)
+    _calculate_num_points_in_gt(data_path, minerva_polimove_infos_val, relative_path, use_images)           ## TODO: Check why it does not work
     filename = save_path / f'{pkl_prefix}_infos_val.pkl'
     print(f'{pkl_prefix} info val file is saved to {filename}')
-    mmengine.dump(michele_custom_infos_val, filename)
+    mmengine.dump(minerva_polimove_infos_val, filename)
 
-    # Do the same for TRAIN-VAL files                                   ## Here, dictionaries are already created
+    # Do the same for TRAIN-VAL files
     filename = save_path / f'{pkl_prefix}_infos_trainval.pkl'
     print(f'{pkl_prefix} info trainval file is saved to {filename}')
-    mmengine.dump(michele_custom_infos_train + michele_custom_infos_val, filename)
+    mmengine.dump(minerva_polimove_infos_train + minerva_polimove_infos_val, filename)
 
     # Do the same for TEST files
     #       - Here, skip calculating the number of points (do not need gt data, apparently)
     #       - Also, give argument "label_info=False" so that the labels are not created (not needed for the test files)
-    michele_custom_infos_test = get_michele_custom_image_info(
+    minerva_polimove_infos_test = get_minerva_polimove_image_info(
         data_path,
         use_images,
         training=False,
@@ -198,7 +153,7 @@ def create_minerva_polimove_info_file(data_path,
         relative_path=relative_path)
     filename = save_path / f'{pkl_prefix}_infos_test.pkl'
     print(f'{pkl_prefix} info test file is saved to {filename}')
-    mmengine.dump(michele_custom_infos_test, filename)
+    mmengine.dump(minerva_polimove_infos_test, filename)
 
 
 

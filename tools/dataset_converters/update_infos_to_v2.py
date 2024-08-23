@@ -24,6 +24,9 @@ from mmdet3d.datasets.convert_utils import (convert_annos,
 from mmdet3d.datasets.utils import convert_quaternion_to_matrix
 from mmdet3d.structures import points_cam2img
 
+'''
+######################################### USEFUL FUNCTIONS ##########################################
+'''
 
 def get_empty_instance():
     """Empty annotation for single instance."""
@@ -233,6 +236,16 @@ def generate_kitti_camera_instances(ori_info_dict):
 
 
 
+
+
+
+'''
+######################################### CUSTOM KITTI ##########################################
+#
+# ATTENTION: Contains useful information about the calibration
+#
+'''
+
 # Copied function: from "update_kitti_infos"
 # Peculiarities:
 #   - Takes a boolean "use_images" as input, to remove the modifications linked to images
@@ -427,7 +440,191 @@ def update_michele_custom_infos(pkl_path, out_dir, use_images=True):
 
 
 
-## Comments directly in "tools/creata_data.py"
+
+
+
+# Copied function: from "update_kitti_infos"
+# Peculiarities:
+#   - Takes a boolean "use_images" as input, to remove the modifications linked to images
+#   - Additionally has a boolean "keep_calib" that, if TRUE, keeps the "calib" elements even if "use_images" is FALSE
+def update_minerva_polimove_infos(pkl_path, out_dir, use_images=True):
+    
+    # Just some warning prints
+    print(f'{pkl_path} will be modified.')
+    if out_dir in pkl_path:
+        print(f'Warning, you may overwriting '
+              f'the original data {pkl_path}.')
+        time.sleep(2)
+
+    # IMPORTANT: these are the classes that will be considered as "relevant". The other ones will be set to "-1"
+    METAINFO = ['Car']
+    
+    # Two lists are created:
+    #   - "data_list"       =   the instances in the "original" format
+    #   - "converted_list"  =   the instances in the "MMDet" format
+    print(f'Reading from input file: {pkl_path}.')
+    data_list = mmengine.load(pkl_path)
+    print('Start updating:')
+    converted_list = []
+
+    # ATTENTION: Moved the line here, otherwise if test is empty gives error (instance referenced before assignment)
+    ignore_class_name = set()
+    
+    # A for loop that at each step:
+    #   1. Takes an instance form the list "data_list" in original format
+    #   2. Modifies it
+    #   3. Appends it to the list "converted_list" in MMDet format
+    for ori_info_dict in mmengine.track_iter_progress(data_list):
+
+        # Take a dictionary with all the needed keys, but all empty
+        temp_data_info = get_empty_standard_data_info()
+
+        # Assign the "plane" if present in original instance
+        if 'plane' in ori_info_dict:
+            temp_data_info['plane'] = ori_info_dict['plane']
+
+        # Assign the instance index
+        temp_data_info['sample_idx'] = ori_info_dict['point_cloud']['pc_idx']       ## MODIFIED: Now only takes the id from the LiDAR
+
+        # Assign the projection matrices
+        if use_images:                                                                      ## Used the "use_images" boolean here
+            temp_data_info['images']['CAM0']['cam2img'] = ori_info_dict['calib'][
+                'P0'].tolist()
+            temp_data_info['images']['CAM1']['cam2img'] = ori_info_dict['calib'][
+                'P1'].tolist()
+            temp_data_info['images']['CAM2']['cam2img'] = ori_info_dict['calib'][
+                'P2'].tolist()
+            temp_data_info['images']['CAM3']['cam2img'] = ori_info_dict['calib'][
+                'P3'].tolist()
+
+        # Assign the image path and shape. Assign the lidar path and number of features.
+        if use_images:                                                                                          ## Used the "use_images" boolean here
+            temp_data_info['images']['CAM2']['img_path'] = Path(ori_info_dict['image']['image_path']).name
+            h, w = ori_info_dict['image']['image_shape']
+            temp_data_info['images']['CAM2']['height'] = h
+            temp_data_info['images']['CAM2']['width'] = w
+        temp_data_info['lidar_points']['num_pts_feats'] = ori_info_dict['point_cloud']['num_features']
+        temp_data_info['lidar_points']['lidar_path'] = Path(ori_info_dict['point_cloud']['velodyne_path']).name
+
+        # Assign other "calib" infos
+        if use_images:                                                                                          ## Used the "use_images" boolean here
+            rect = ori_info_dict['calib']['R0_rect'].astype(np.float32)
+            Trv2c = ori_info_dict['calib']['Tr_velo_to_cam'].astype(np.float32)
+            lidar2cam = rect @ Trv2c
+            temp_data_info['images']['CAM2']['lidar2cam'] = lidar2cam.tolist()
+            temp_data_info['lidar_points']['Tr_velo_to_cam'] = Trv2c.tolist()
+            
+            temp_data_info['images']['CAM0']['lidar2img'] = (
+                ori_info_dict['calib']['P0'] @ lidar2cam).tolist()
+            temp_data_info['images']['CAM1']['lidar2img'] = (
+                ori_info_dict['calib']['P1'] @ lidar2cam).tolist()
+            temp_data_info['images']['CAM2']['lidar2img'] = (
+                ori_info_dict['calib']['P2'] @ lidar2cam).tolist()
+            temp_data_info['images']['CAM3']['lidar2img'] = (
+                ori_info_dict['calib']['P3'] @ lidar2cam).tolist()
+            cam2img = ori_info_dict['calib']['P2']
+
+        # for potential usage
+        if use_images:                                                                              ## Used the "use_images" boolean here
+            temp_data_info['images']['R0_rect'] = ori_info_dict['calib'][
+                'R0_rect'].astype(np.float32).tolist()
+            temp_data_info['lidar_points']['Tr_imu_to_velo'] = ori_info_dict[   ## TODO: Check because maybe could still be inserted (even w/out images)
+                'calib']['Tr_imu_to_velo'].astype(np.float32).tolist()
+
+        # For loop:
+        #   - goes through the instances inside the annotations one by one: a loop(instances in annos) in the loop(scans in dictionary)
+        #   - each instance is appended to the "instance_list"
+        #   - iteratively constructs a SET of the instances that need to be ignored   --->   The set does NOT have repetitions!!!
+        anns = ori_info_dict.get('annos', None)
+        if anns is not None:
+            num_instances = len(anns['name'])
+            instance_list = []
+            for instance_id in range(num_instances):
+                empty_instance = get_empty_instance()
+                if use_images:                                                          ## Used the "use_images" boolean here
+                                                                                        # TODO: Implement this feature before, it was removed but it makes
+                                                                                        #       sense because it indicates the pixels of the bbox
+                    empty_instance['bbox'] = anns['bbox'][instance_id].tolist()
+
+                if anns['name'][instance_id] in METAINFO:
+                    empty_instance['bbox_label'] = METAINFO.index(
+                        anns['name'][instance_id])
+                else:
+                    ignore_class_name.add(anns['name'][instance_id])
+                    empty_instance['bbox_label'] = -1
+
+                if use_images:                                                          ## Used the "use_images" boolean here
+                                                                                        # TODO: There is a repetition with the lines above
+                    empty_instance['bbox'] = anns['bbox'][instance_id].tolist()
+
+                loc = anns['location'][instance_id]
+                dims = anns['dimensions'][instance_id]
+                rots = anns['rotation_y'][:, None][instance_id]
+
+                # TODO: Check because probably here there are some issues with the origin of boxes
+                dst = np.array([0.5, 0.5, 0.5])
+                src = np.array([0.5, 1.0, 0.5])
+
+                center_3d = loc + dims * (dst - src)
+                if use_images:                                                                          ## Used the "use_images" boolean here
+                    center_2d = points_cam2img(center_3d.reshape([1, 3]), cam2img, with_depth=True)
+                    center_2d = center_2d.squeeze().tolist()
+                    empty_instance['center_2d'] = center_2d[:2]
+                    empty_instance['depth'] = center_2d[2]
+
+                gt_bboxes_3d = np.concatenate([loc, dims, rots]).tolist()
+                empty_instance['bbox_3d'] = gt_bboxes_3d
+                empty_instance['bbox_label_3d'] = copy.deepcopy(
+                    empty_instance['bbox_label'])
+                if use_images:                                                          ## Used the "use_images" boolean here
+                                                                                        # TODO:There is a repetition with the lines above
+                    empty_instance['bbox'] = anns['bbox'][instance_id].tolist()
+                empty_instance['index'] = anns['index'][instance_id].tolist()
+                empty_instance['group_id'] = anns['group_ids'][
+                    instance_id].tolist()
+                # ATTENTION: Here commented the part about difficulty
+                # empty_instance['difficulty'] = anns['difficulty'][
+                #     instance_id].tolist()
+                empty_instance['num_lidar_pts'] = anns['num_points_in_gt'][
+                    instance_id].tolist()
+                empty_instance = clear_instance_unused_keys(empty_instance)
+                instance_list.append(empty_instance)
+            temp_data_info['instances'] = instance_list
+            if use_images:                                                                              ## Used the "use_images" boolean here
+                cam_instances = generate_kitti_camera_instances(ori_info_dict)
+                temp_data_info['cam_instances'] = cam_instances
+        
+        #   1. Remove the unused keys
+        #   2. Append the updated and "cleared" dictionary to the "converted_list"
+        temp_data_info, _ = clear_data_info_unused_keys(temp_data_info)
+        converted_list.append(temp_data_info)
+    
+    pkl_name = Path(pkl_path).name
+    out_path = osp.join(out_dir, pkl_name)
+    print(f'Writing to output file: {out_path}.')
+    print(f'ignore classes: {ignore_class_name}')
+
+    # The actual final file is NOT only the updated dictionary.
+    # It is a composed dictionary that has metainfos with:
+    #   - The categories, for the classes
+    #   - The name of the dataset (TODO: Useless??)
+    #   - The information about the version (TODO: Useless??)
+    metainfo = dict()
+    metainfo['categories'] = {k: i for i, k in enumerate(METAINFO)}
+    if ignore_class_name:
+        for ignore_class in ignore_class_name:
+            metainfo['categories'][ignore_class] = -1
+    metainfo['dataset'] = 'minerva_polimove'
+    metainfo['info_version'] = 'Michele Sbacco'
+    converted_data_info = dict(metainfo=metainfo, data_list=converted_list)
+    
+    mmengine.dump(converted_data_info, out_path, 'pkl')
+
+
+
+
+
+
 def update_kitti_infos(pkl_path, out_dir):
     print(f'{pkl_path} will be modified.')
     if out_dir in pkl_path:
@@ -1350,10 +1547,10 @@ def update_pkl_infos(dataset, out_dir, pkl_path):
         update_nuscenes_infos(pkl_path=pkl_path, out_dir=out_dir)
     elif dataset.lower() == 's3dis':
         update_s3dis_infos(pkl_path=pkl_path, out_dir=out_dir)
-    elif dataset == 'michele_custom_images':
-        update_michele_custom_infos(pkl_path, out_dir)
-    elif dataset == 'michele_custom_NO_IMAGES':
-        update_michele_custom_infos(pkl_path, out_dir, use_images=False)
+    elif dataset == 'minerva_polimove_cameralidar':
+        update_minerva_polimove_infos(pkl_path, out_dir)
+    elif dataset == 'minerva_polimove_lidaronly':
+        update_minerva_polimove_infos(pkl_path, out_dir, use_images=False)
     else:
         raise NotImplementedError(f'Do not support convert {dataset} to v2.')
 
