@@ -371,6 +371,24 @@ def create_minerva_polimove_groundtruth_database(dataset_class_name,
         #   - Examples at the end of function
         data_info = dataset.get_data_info(j)
         example = dataset.pipeline(data_info)
+
+
+
+
+
+
+        idx = int(example['sample_idx'])
+        print("\n\t%s" %idx)
+        if idx<5:
+            tensor = example['points'].coord
+            array = tensor.numpy()
+            for i in range(10):
+                print("\t\t%s" %array[i])
+
+
+
+
+
         
         # Get some various info from the "example" dictionary
         annos = example['ann_info']

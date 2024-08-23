@@ -454,7 +454,7 @@ def update_minerva_polimove_infos(pkl_path, out_dir, use_images=True):
     if out_dir in pkl_path:
         print(f'Warning, you may overwriting '
               f'the original data {pkl_path}.')
-        time.sleep(2)
+        time.sleep(0.5)
 
     # IMPORTANT:    - these are the classes that will be considered as "relevant". The other ones will be set to "-1"
     #               - the class 'Extra' is needed because otherwise the class 'Car' is considered as three different classes
