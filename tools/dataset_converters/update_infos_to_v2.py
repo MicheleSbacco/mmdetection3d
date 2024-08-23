@@ -456,8 +456,11 @@ def update_minerva_polimove_infos(pkl_path, out_dir, use_images=True):
               f'the original data {pkl_path}.')
         time.sleep(2)
 
-    # IMPORTANT: these are the classes that will be considered as "relevant". The other ones will be set to "-1"
-    METAINFO = ['Car']
+    # IMPORTANT:    - these are the classes that will be considered as "relevant". The other ones will be set to "-1"
+    #               - the class 'Extra' is needed because otherwise the class 'Car' is considered as three different classes
+    METAINFO = {
+        'classes': ('Car', 'Extra')
+    }
     
     # Two lists are created:
     #   - "data_list"       =   the instances in the "original" format
@@ -546,8 +549,8 @@ def update_minerva_polimove_infos(pkl_path, out_dir, use_images=True):
                                                                                         #       sense because it indicates the pixels of the bbox
                     empty_instance['bbox'] = anns['bbox'][instance_id].tolist()
 
-                if anns['name'][instance_id] in METAINFO:
-                    empty_instance['bbox_label'] = METAINFO.index(
+                if anns['name'][instance_id] in METAINFO['classes']:
+                    empty_instance['bbox_label'] = METAINFO['classes'].index(
                         anns['name'][instance_id])
                 else:
                     ignore_class_name.add(anns['name'][instance_id])
@@ -610,7 +613,7 @@ def update_minerva_polimove_infos(pkl_path, out_dir, use_images=True):
     #   - The name of the dataset (TODO: Useless??)
     #   - The information about the version (TODO: Useless??)
     metainfo = dict()
-    metainfo['categories'] = {k: i for i, k in enumerate(METAINFO)}
+    metainfo['categories'] = {k: i for i, k in enumerate(METAINFO['classes'])}
     if ignore_class_name:
         for ignore_class in ignore_class_name:
             metainfo['categories'][ignore_class] = -1
