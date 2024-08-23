@@ -119,13 +119,13 @@ def get_label_anno(label_path, use_images=False):
     # Take the annotations in the frame of POLIMOVE, and then update them to the frame of KittiCamera
     annotations['location'] = np.array([[float(info) for info in x[1:4]]
                                         for x in content]).reshape(-1, 3)
-    for i, position in enumerate(annotations['location']):
-        new_z = position[0]
-        new_y = -position[2]
-        new_x = -position[1]
-        annotations['location'][i][0] = new_x
-        annotations['location'][i][1] = new_y
-        annotations['location'][i][2] = new_z
+    # for i, position in enumerate(annotations['location']):
+    #     new_z = position[0]
+    #     new_y = -position[2]
+    #     new_x = -position[1]
+    #     annotations['location'][i][0] = new_x
+    #     annotations['location'][i][1] = new_y
+    #     annotations['location'][i][2] = new_z
     # Take the rotation in degrees (POLIMOVE) and turn it into radians (KittiCamera)    TODO: Check that the sign is right (one axis upward, other one downward)
     #                                                                                   TODO: If I do not manipulate the pointcloud, why should I change the bboxes?
     annotations['rotation_y'] = np.array([float(x[7])*(math.pi/180)
