@@ -10,7 +10,7 @@ from tools.dataset_converters import lyft_converter as lyft_converter
 from tools.dataset_converters import nuscenes_converter as nuscenes_converter
 from tools.dataset_converters import semantickitti_converter
 from tools.dataset_converters.create_gt_database import (
-    GTDatabaseCreater, create_groundtruth_database, create_michele_custom_groundtruth_database)
+    GTDatabaseCreater, create_groundtruth_database, create_michele_custom_groundtruth_database, create_minerva_polimove_groundtruth_database)
 from tools.dataset_converters.update_infos_to_v2 import update_pkl_infos
 
 
@@ -190,12 +190,10 @@ def minerva_polimove_data_prep(root_path,
     update_pkl_infos(minerva_dataset_choice, out_dir=out_dir, pkl_path=info_test_path)
     
     # Function that creates the ground-truth ".pkl" file, and all the gt-files about each single instance
-    #   - If use images, essentially the same as KittiDataset so we just use that one
+    #   - If use images, TODO complete here (for now completely empty)
     #   - If not using them, need to take the custom dataset
-    if use_images: dataset_name="minerva_polimove_cameralidar"
-    else: dataset_name="minerva_polimove_lidaronly"
-    create_michele_custom_groundtruth_database(
-        dataset_name,
+    create_minerva_polimove_groundtruth_database(
+        minerva_dataset_choice,
         root_path,
         info_prefix,
         f'{info_prefix}_infos_train.pkl')

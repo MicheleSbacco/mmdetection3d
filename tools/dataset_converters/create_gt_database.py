@@ -109,6 +109,9 @@ def crop_image_patch(pos_proposals, gt_masks, pos_assigned_gt_inds, org_img):
 
 
 
+
+
+
 '''
 ######################################### CUSTOM KITTI ##########################################
 '''
@@ -265,6 +268,9 @@ def create_michele_custom_groundtruth_database(dataset_class_name,
 
 
 
+
+
+
 '''
 ######################################### MINERVA POLIMOVE ##########################################
 '''
@@ -273,32 +279,49 @@ def create_michele_custom_groundtruth_database(dataset_class_name,
 # Peculiarities:
 #   - Suppresses all the unused arguments("relative_path", "add_rgb", "lidar_only", "bev_only", "coors_range")
 #   - Suppresses the mask-related arguments ("mask_anno_path", "with_mask")
-def create_michele_custom_groundtruth_database(dataset_class_name,
-                                               data_path,
-                                               info_prefix,
-                                               info_path=None,
-                                               used_classes=None,
-                                               database_save_path=None,
-                                               db_info_save_path=None):
+# 
+# TODO: Compare with the "KITTI" version directly (this was copied from "michele_custom") and do this with all files when
+# will need to add images
+#
+# TODO: Solve "RuntimeWarning: invalid value encountered in subtract gt_points[:, :3] -= gt_boxes_3d[i, :3]" that comes when
+# you execute the file
+def create_minerva_polimove_groundtruth_database(dataset_class_name,
+                                                 data_path,
+                                                 info_prefix,
+                                                 info_path=None,
+                                                 used_classes=None,
+                                                 database_save_path=None,
+                                                 db_info_save_path=None):
+
+    # Adapt to the real dataset name
+    if dataset_class_name == "minerva_polimove_cameralidar":
+        dataset_class_name = "MinervaCameraLidarDataset"
+    elif dataset_class_name == "minerva_polimove_lidaronly":
+        dataset_class_name = "MinervaLidarOnlyDataset"
+    else:
+        print("Wrong dataset! Quitting...")
+        return
 
     # Just a warning print
     print(f'Create GT Database of {dataset_class_name}')
 
-    # Create a dataset configuration that will be used to build a dataset.
-    #   - If need to use images, just make really similar to Kitti (just some peculiarities as
-    #     explained above)
-    #   - Otherwise, use the custom dataset in "mmdet3d/datasets"
+
+
+    ######################################### BUILD DATASET ##########################################
+    # Build a dataset using a connfiguration also present in the "mmdet3d/datasets" folder
+    # 
+    # Here: JUST LIDAR
     dataset_cfg = dict(
-        type=dataset_class_name,
+        type=dataset_class_name, 
         data_root=data_path, 
         ann_file=info_path,
         modality=dict(
             use_lidar=True,
-            use_camera=False,                                   ##  With kitti was enabled just in case of segmentation mask. Probably
+            use_camera=False,                               ##  With kitti was enabled just in case of segmentation mask. Probably
                                                                 #   for fusion I will need it True
         ),
         data_prefix=dict(
-            pts='training/velodyne'                             ## If not images, use "velodyne" point cloud (original one), not the
+            pts='training/velodyne'                         ## If not images, use "velodyne" point cloud (original one), not the
                                                                 #  reduced one at "velodyne_reduced"
         ),
         pipeline=[
@@ -315,20 +338,14 @@ def create_michele_custom_groundtruth_database(dataset_class_name,
                 backend_args=None)
         ]
     )
-    # Update the configuration if need to use images (essentially, just make it same as KITTI preparation)
-    if "Kitti" in dataset_class_name:
-        dataset_cfg.update(
-            data_prefix=dict(
-                pts='training/velodyne_reduced', img='training/image_2'
-            ),
-            modality=dict(
-                use_lidar=True,
-                use_camera=False,
-            )
-        )
+    # TODO: Update the configuration if need to use images (for now completely empty)
+
     # Build the dataset with mmengine
     dataset = DATASETS.build(dataset_cfg)
 
+
+
+    ######################################### PREPARE ".pkl" FILE ##########################################
     # Create names for:
     #   - GT Database (instance by instance)
     #   - GT Pickle File
@@ -357,8 +374,7 @@ def create_michele_custom_groundtruth_database(dataset_class_name,
         
         # Get some various info from the "example" dictionary
         annos = example['ann_info']
-        sample_idx = example['sample_idx']                                                   ##  Not really an image, but the sample number (also 
-                                                                                            #   present in the point-cloud after modifications)
+        sample_idx = example['sample_idx']
         points = example['points'].numpy()
         gt_boxes_3d = annos['gt_bboxes_3d'].numpy()
         names = [dataset.metainfo['classes'][i] for i in annos['gt_labels_3d']]
@@ -374,7 +390,7 @@ def create_michele_custom_groundtruth_database(dataset_class_name,
         else:
             group_ids = np.arange(gt_boxes_3d.shape[0], dtype=np.int64)
 
-        # Take the number of bboxes, and points in the point cloud for each bbox
+        # Take the number of bboxes, and the list of points in bboxes (list of False/True)
         num_obj = gt_boxes_3d.shape[0]
         point_indices = box_np_ops.points_in_rbbox(points, gt_boxes_3d)
         # For loop: does one by one the bboxes of the single image/scan (loop in the loop)

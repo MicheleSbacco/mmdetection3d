@@ -27,14 +27,21 @@ from .waymo_dataset import WaymoDataset
 
 
 
+
+
+
 ## Added import for new custom dataset
 from .michele_custom_dataset_no_images import MicheleCustomDatasetNoImages
+## Added import for Minerva (POLIMOVE) datasets
+from .minerva_polimove_datasets import *
 
 
 
 # Here added my new custom dataset
 __all__ = [
-    'MicheleCustomDatasetNoImages', 'KittiDataset', 'CBGSDataset', 'NuScenesDataset', 'LyftDataset',
+    'MicheleCustomDatasetNoImages', 
+    'MinervaLidarOnlyDataset', 'MinervaCameraLidarDataset',
+    'KittiDataset', 'CBGSDataset', 'NuScenesDataset', 'LyftDataset',
     'ObjectSample', 'RandomFlip3D', 'ObjectNoise', 'GlobalRotScaleTrans',
     'PointShuffle', 'ObjectRangeFilter', 'PointsRangeFilter',
     'LoadPointsFromFile', 'S3DISSegDataset', 'S3DISDataset',
