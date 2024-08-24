@@ -8,7 +8,7 @@ _base_ = [
 ##  Some comments:
 #       - Some features of the pipelines are actually changed from the "_base_/datasets" file. That's why
 #         some stuff is repeated in this file
-#       - Same thing for the optimizer (which originally is in the "_base_/schadules" file)
+#       - Same thing for the optimizer (which originally is in the "_base_/schedules" file)
 #       - The "train_cfg", "test_cfg", "val_cfg" are both outside and inside the "model" config and they
 #         serve different purposes. See "Docs" -> "Learn about Configs" for more info.
 

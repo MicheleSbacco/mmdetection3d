@@ -34,7 +34,7 @@ class MinervaLidarOnlyDataset(Det3DDataset):
                  box_type_3d: str = 'LiDAR',
                  filter_empty_gt: bool = True,
                  test_mode: bool = False,
-                 pcd_limit_range: List[float] = [0, -40, -3, 70.4, 40, 0.0],
+                 pcd_limit_range: List[float] = [-80, -35, -2, 200, 35, 6],
                  **kwargs) -> None:
 
         self.pcd_limit_range = pcd_limit_range

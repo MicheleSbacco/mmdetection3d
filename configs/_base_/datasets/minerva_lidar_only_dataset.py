@@ -46,9 +46,10 @@
 dataset_type = 'MinervaLidarOnlyDataset'
 data_root = 'data/minerva_polimove/'
 class_names = ['Car']  # replace with your dataset class
-point_cloud_range = [0, -40, -3, 70.4, 40, 1]  # adjust according to your dataset
+point_cloud_range = [-80, -25, -1, 200, 25, 5]  # adjust according to your dataset
 input_modality = dict(use_lidar=True, use_camera=False)
 metainfo = dict(classes=class_names)
+default_backend_args = None
 
 
 
@@ -59,7 +60,26 @@ metainfo = dict(classes=class_names)
 ######################################### DB-SAMPLER ##########################################
 '''
 
-## TODO (1): Missing db_sampler
+# Added for Minerva and copied from kitti+pointpillars 3d-3class
+# Modified some stuff such as:  - {obvious} classes (from 3 to 1)
+#                               - {obvious} info_path
+db_sampler = dict(
+    data_root=data_root,
+    info_path=data_root + 'minerva_polimove_dbinfos_train.pkl',
+    rate=1.0,
+    prepare=dict(
+        filter_by_difficulty=[-1],                  # Try to leave it even though I don't have the parameter in
+                                                    # the dataset
+        filter_by_min_points=dict(Car=5)),                          ## Can be adjusted in case of need
+    classes=class_names,
+    sample_groups=dict(Car=15),
+    points_loader=dict(
+        type='LoadPointsFromFile',
+        coord_type='LIDAR',
+        load_dim=4,
+        use_dim=4,
+        backend_args=default_backend_args),
+    backend_args=default_backend_args)
 
 
 
@@ -70,59 +90,70 @@ metainfo = dict(classes=class_names)
 ######################################### PIPELINES ##########################################
 '''
 
+# Modified to make it fit PointPillars
+#       - Added Obj. Sample
+#       - Removed Obj. Noise 
 train_pipeline = [
-    dict(
-        type='LoadPointsFromFile',
-        coord_type='LIDAR',
-        load_dim=4,  # replace with your point cloud data dimension
-        use_dim=4),  # replace with the actual dimension used in training and inference
+    dict(type='LoadPointsFromFile',
+         coord_type='LIDAR',
+         load_dim=4,
+         use_dim=4,
+         backend_args=default_backend_args),
     dict(type='LoadAnnotations3D',
          with_bbox_3d=True,
          with_label_3d=True),
-    
-    
-    ## TODO (1): Missing object sample
-
-    
-    dict(
-        type='ObjectNoise',
-        num_try=100,
-        translation_std=[1.0, 1.0, 0.5],
-        global_rot_range=[0.0, 0.0],
-        rot_range=[-0.78539816, 0.78539816]),
+    dict(type='ObjectSample', 
+         db_sampler=db_sampler, 
+         use_ground_plane=False),
     dict(type='RandomFlip3D', flip_ratio_bev_horizontal=0.5),
-    dict(
-        type='GlobalRotScaleTrans',
-        rot_range=[-0.78539816, 0.78539816],
-        scale_ratio_range=[0.95, 1.05]),
+    dict(type='GlobalRotScaleTrans',
+         rot_range=[-0.78539816, 0.78539816],
+         scale_ratio_range=[0.95, 1.05]),
     dict(type='PointsRangeFilter', point_cloud_range=point_cloud_range),
     dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range),
     dict(type='PointShuffle'),
-    dict(
-        type='Pack3DDetInputs',
-        keys=['points', 'gt_bboxes_3d', 'gt_labels_3d'])
+    dict(type='Pack3DDetInputs',
+         keys=['points',
+               'gt_bboxes_3d',
+               'gt_labels_3d'])
 ]
+# Added augmentation (MultiScaleFlipAug3D) to make it fit PointPillars
 test_pipeline = [
     dict(
         type='LoadPointsFromFile',
         coord_type='LIDAR',
         load_dim=4,  # replace with your point cloud data dimension
         use_dim=4),
-    
-    
-    ## TODO (2): Missing Aumentation
-    
-    
-    dict(type='Pack3DDetInputs', keys=['points'])
+    dict(type='MultiScaleFlipAug3D',
+         img_scale=(1333, 800),                                 ## Sure it can remain??
+         pts_scale_ratio=1,
+         flip=False,
+         transforms=[
+             dict(type='GlobalRotScaleTrans',
+                  rot_range=[0, 0],
+                  scale_ratio_range=[1., 1.],
+                  translation_std=[0, 0, 0]),
+             dict(type='RandomFlip3D'),
+             # Experimented:    - either add both or remove both (otherwise there are boxes with no points at all)
+             #                  - Kitti+Pointpillars just keeps the "PointsRangeFilter"
+             #                  - I will proceed to remove both of them, so that the test is done on the whole pointcloud. If 
+             #                    then the pre-processing will directly cut the point-cloud, I can cut it here too
+             dict(type='PointsRangeFilter', point_cloud_range=point_cloud_range),
+             dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range)
+         ]),
+    dict(type='Pack3DDetInputs', 
+         keys=['points'])                                                       ## Here only points because don't have labels!!
 ]
-# construct a pipeline for data and gt loading in show function
+# Point-cloud filtering: will keep it because not interested in the rest
 eval_pipeline = [
-    dict(
-        type='LoadPointsFromFile', 
+    dict(type='LoadPointsFromFile', 
         coord_type='LIDAR', 
         load_dim=4, 
         use_dim=4),
-    dict(type='Pack3DDetInputs', keys=['points']),
+    dict(type='Pack3DDetInputs',
+         keys=['points']),
+    dict(type='PointsRangeFilter', point_cloud_range=point_cloud_range),
+    dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range)
 ]
 
 
@@ -135,12 +166,12 @@ eval_pipeline = [
 '''
 
 train_dataloader = dict(
-    batch_size=6,
+    batch_size=4,
     num_workers=4,
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=True),
     dataset=dict(
-        type='RepeatDataset',
+        type='RepeatDataset',                                       ## This makes the total number of epochs equal to N*n_epochs
         times=2,
         dataset=dict(
             type=dataset_type,
@@ -194,6 +225,7 @@ test_dataloader = dict(
 ######################################### EVALUATORS ##########################################
 '''
 
+# Will need to modify here...
 val_evaluator = dict(
     type='KittiMetric',
     ann_file=data_root + 'minerva_polimove_infos_val.pkl',  # specify your validation pkl info
