@@ -131,7 +131,7 @@ def get_label_anno(label_path, use_images=False):
     #     annotations['location'][i][0] = new_x
     #     annotations['location'][i][1] = new_y
     #     annotations['location'][i][2] = new_z
-    # Take the rotation in degrees (POLIMOVE) and turn it into radians (KittiCamera)    TODO: Check that the sign is right (one axis upward, other one downward)
+    # Take the rotation in degrees (POLIMOVE) and turn it into radians (KittiCamera)    TODO: Comment of the final version (not negative, nor in radians)
     #                                                                                   TODO: If I do not manipulate the pointcloud, why should I change the bboxes?
     annotations['rotation_y'] = np.array([float(x[7])
                                           for x in content]).reshape(-1)
