@@ -113,12 +113,17 @@ def get_label_anno(label_path, use_images=False):
     annotations['name'] = np.array([x[0] for x in content])
     # dimensions will convert hwl format to standard lhw(camera) format.
     # As said by the comment above, they want a (length-height-width) format. So we need to make up for it
+    # TODO: Comment on the final version
+    # annotations['dimensions'] = np.array([[float(info) for info in x[4:7]]
+    #                                       for x in content
+    #                                       ]).reshape(-1, 3)[:, [0, 2, 1]]
     annotations['dimensions'] = np.array([[float(info) for info in x[4:7]]
                                           for x in content
-                                          ]).reshape(-1, 3)[:, [0, 2, 1]]
+                                          ]).reshape(-1, 3)
     # Take the annotations in the frame of POLIMOVE, and then update them to the frame of KittiCamera
     annotations['location'] = np.array([[float(info) for info in x[1:4]]
                                         for x in content]).reshape(-1, 3)
+    # TODO: Add comment on the change
     # for i, position in enumerate(annotations['location']):
     #     new_z = position[0]
     #     new_y = -position[2]
@@ -128,7 +133,7 @@ def get_label_anno(label_path, use_images=False):
     #     annotations['location'][i][2] = new_z
     # Take the rotation in degrees (POLIMOVE) and turn it into radians (KittiCamera)    TODO: Check that the sign is right (one axis upward, other one downward)
     #                                                                                   TODO: If I do not manipulate the pointcloud, why should I change the bboxes?
-    annotations['rotation_y'] = np.array([float(x[7])*(math.pi/180)
+    annotations['rotation_y'] = np.array([float(x[7])
                                           for x in content]).reshape(-1)
     # Create this two "strange" values TODO: Understand what are they needed for
     index = list(range(num_objects)) + [-1] * (num_gt - num_objects)

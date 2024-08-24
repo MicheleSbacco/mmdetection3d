@@ -92,8 +92,9 @@ class MinervaLidarOnlyDataset(Det3DDataset):
         #       - What KITTI did was to create Camera type boxes and then convert them with the appropriate
         #         transformation and appropriate function into LiDAR boxes  
         #       - TODO: Make a choice that works and explain it
-        #       - TODO: Also check the "load_type" 
-        gt_bboxes_3d = CameraInstance3DBoxes(ann_info['gt_bboxes_3d'])
+        #       - TODO: Also check the "load_type"
+        #       - TODO: Explore what changes by changing the type of "3DBoxes"
+        gt_bboxes_3d = CameraInstance3DBoxes(ann_info['gt_bboxes_3d'], origin=(.5, 1., 1.))
         ann_info['gt_bboxes_3d'] = gt_bboxes_3d
         return ann_info
 

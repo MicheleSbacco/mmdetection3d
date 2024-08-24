@@ -643,33 +643,38 @@ AT THE END OF FILE: Official documentation from KITTI Dataset
 ###########################################################################
 
 How we save data:
-{
-    "obj_id": "0",
-    "obj_type": "Car",
-    "psr": {
-        "position": {
-            "x": 33.44053528495641,
-            "y": 13.468654831651865,
-            "z": 1.5964655633310705
-        },
-        "rotation": {
-            "x": 0,
-            "y": 0,
-            "z": -0.0037892504174532
-        },
-        "scale": {
-            "x": 5,
-            "y": 2,
-            "z": 1.5
-        }
-    }
-}
+	- JSON
+		{
+		    "obj_id": "0",
+		    "obj_type": "Car",
+		    "psr": {
+			"position": {
+			    "x": 33.44053528495641,
+			    "y": 13.468654831651865,
+			    "z": 1.5964655633310705
+			},
+			"rotation": {
+			    "x": 0,
+			    "y": 0,
+			    "z": -0.0037892504174532
+			},
+			"scale": {
+			    "x": 5,
+			    "y": 2,
+			    "z": 1.5
+			}
+		    }
+		}
+	- TXT
+		0    1     2     3     4      5     6      7      
+		Name x_pos y_pos z_pos length width height rotation_vertical
 
 
 Our axis are as follows:   - x: positive in front of the car
 			   - y: positive to the left of the car
 			   - z: positive going above the car
-Angles are expressed in degrees [deg].
+All information is given from the point of view of the COG (Centre Of Gravity) of the car.
+Angles are expressed in degrees [deg]. Rotation is positive if CCW seen from above.
 
 
 The axis for KITTI are instead: - x: points to the right of the camera
@@ -677,6 +682,7 @@ The axis for KITTI are instead: - x: points to the right of the camera
 				- z: points forward in the direction the camera is facing
 All the positions and locations in KITTI are expressed in camera coordinates.
 Angles are expressed in radians [rad].
+The 'DontCare' is used for objects that are "too far" in order to reduce the risk of false negatives
 
 
 
@@ -983,5 +989,4 @@ sum = 0;
 for (i=1; i<=40; i++)
   sum += vals[i];
 average = sum/40.0;
-
 '''
