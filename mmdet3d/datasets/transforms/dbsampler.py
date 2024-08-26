@@ -280,7 +280,8 @@ class DataBaseSampler(object):
                 s_points_list.append(s_points)
 
             gt_labels = np.array([self.cat2label[s['name']] for s in sampled],
-                                 dtype=np.long)
+                                 dtype=np.int_)                                 ## Suggested by ChatGPT: np.long was a type in 
+                                                                                #  older versions of Python but is now deprecated
 
             if ground_plane is not None:
                 xyz = sampled_gt_bboxes[:, :3]

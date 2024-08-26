@@ -46,7 +46,8 @@
 dataset_type = 'MinervaLidarOnlyDataset'
 data_root = 'data/minerva_polimove/'
 class_names = ['Car']  # replace with your dataset class
-point_cloud_range = [-80, -25, -1, 200, 25, 5]  # adjust according to your dataset
+point_cloud_range = [-80, -25, -1, 200, 25, 5]                  ## How to adjust? Use "tools/misc/browse_datase.py" after setting 
+                                                                #  the line "PointsRangeFilter" in test_pipeline to NON-commented
 input_modality = dict(use_lidar=True, use_camera=False)
 metainfo = dict(classes=class_names)
 default_backend_args = None
@@ -122,38 +123,45 @@ test_pipeline = [
     dict(
         type='LoadPointsFromFile',
         coord_type='LIDAR',
-        load_dim=4,  # replace with your point cloud data dimension
+        load_dim=4,
         use_dim=4),
-    dict(type='MultiScaleFlipAug3D',
-         img_scale=(1333, 800),                                 ## Sure it can remain??
-         pts_scale_ratio=1,
-         flip=False,
-         transforms=[
-             dict(type='GlobalRotScaleTrans',
-                  rot_range=[0, 0],
-                  scale_ratio_range=[1., 1.],
-                  translation_std=[0, 0, 0]),
-             dict(type='RandomFlip3D'),
-             # Experimented:    - either add both or remove both (otherwise there are boxes with no points at all)
-             #                  - Kitti+Pointpillars just keeps the "PointsRangeFilter"
-             #                  - I will proceed to remove both of them, so that the test is done on the whole pointcloud. If 
-             #                    then the pre-processing will directly cut the point-cloud, I can cut it here too
-             dict(type='PointsRangeFilter', point_cloud_range=point_cloud_range),
-             dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range)
+    dict(
+        type='MultiScaleFlipAug3D',
+        img_scale=(1333, 800),
+        pts_scale_ratio=1,
+        flip=False,
+        transforms=[
+            dict(type='GlobalRotScaleTrans',
+                rot_range=[0, 0],
+                scale_ratio_range=[1., 1.],
+                translation_std=[0, 0, 0]),
+            dict(type='RandomFlip3D'),
+            # Experimented:     - Kitti+Pointpillars just keeps the "PointsRangeFilter"
+            #                   - I tried to keep both, but the problem is the following. If you keep "ObjectRangeFilter" the 
+            #                     transformer looks for the labels. But we did not upload them with "LoadAnnotations3D" so
+            #                     it gives back an error...
+            #                   - TODO: Try to move them to the "outer" layer of the pipeline, not inside the transform 
+            # dict(type='PointsRangeFilter', point_cloud_range=point_cloud_range),
+            # dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range)
          ]),
-    dict(type='Pack3DDetInputs', 
-         keys=['points'])                                                       ## Here only points because don't have labels!!
+    # Starting to understand: should be what you pass to the actual neural network. So here just keep the points (no labels)
+    dict(type='Pack3DDetInputs',                    
+        keys=['points'])
 ]
-# Point-cloud filtering: will keep it because not interested in the rest
+# TODO:     - understand what to do with point-cloud filtering of the two types
+#           - for now will upload them, just to be sure
 eval_pipeline = [
     dict(type='LoadPointsFromFile', 
         coord_type='LIDAR', 
         load_dim=4, 
         use_dim=4),
+    dict(type='LoadAnnotations3D',
+         with_bbox_3d=True,
+         with_label_3d=True),
     dict(type='Pack3DDetInputs',
-         keys=['points']),
-    dict(type='PointsRangeFilter', point_cloud_range=point_cloud_range),
-    dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range)
+        keys=['points'
+               'gt_bboxes_3d',
+               'gt_labels_3d'])
 ]
 
 
@@ -176,7 +184,7 @@ train_dataloader = dict(
         dataset=dict(
             type=dataset_type,
             data_root=data_root,
-            ann_file='minerva_polimove_infos_train.pkl',  # specify your training pkl info
+            ann_file='minerva_polimove_infos_train.pkl',
             data_prefix=dict(pts='training/velodyne'),      ## TODO (3)
             pipeline=train_pipeline,
             modality=input_modality,
@@ -193,10 +201,13 @@ val_dataloader = dict(
         type=dataset_type,
         data_root=data_root,
         data_prefix=dict(pts='training/velodyne'),      ## TODO (3)
-        ann_file='minerva_polimove_infos_val.pkl',  # specify your validation pkl info
-        pipeline=test_pipeline,
+        ann_file='minerva_polimove_infos_val.pkl',
+        pipeline=eval_pipeline,                                 ## Changed it to eval, before was test_pipeline and actually did not 
+                                                                #  really make much sense. 
+                                                                #  Even more so because the "..._pipeline" variables are used as temp 
+                                                                #  and not definitive variables.
         modality=input_modality,
-        test_mode=True,
+        test_mode=False,                                        ## Also has been changed here (together with the above)
         metainfo=metainfo,
         box_type_3d='LiDAR'))
 test_dataloader = dict(
@@ -225,11 +236,12 @@ test_dataloader = dict(
 ######################################### EVALUATORS ##########################################
 '''
 
-# Will need to modify here...
+# TODO: Will need to modify here...
 val_evaluator = dict(
-    type='KittiMetric',
-    ann_file=data_root + 'minerva_polimove_infos_val.pkl',  # specify your validation pkl info
-    metric='bbox')
+    type='MinervaMetric',
+    ann_file=data_root + 'minerva_polimove_infos_val.pkl',
+    metric='bbox'
+)
 test_evaluator = val_evaluator
 
 

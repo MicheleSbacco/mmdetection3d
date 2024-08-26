@@ -8,7 +8,16 @@ from .panoptic_seg_metric import PanopticSegMetric  # noqa: F401,F403
 from .seg_metric import SegMetric  # noqa: F401,F403
 from .waymo_metric import WaymoMetric  # noqa: F401,F403
 
+
+
+# Adding import for Minerva Polimove
+from .minerva_metric import MinervaMetric
+
+
+
 __all__ = [
     'KittiMetric', 'NuScenesMetric', 'IndoorMetric', 'LyftMetric', 'SegMetric',
-    'InstanceSegMetric', 'WaymoMetric', 'PanopticSegMetric'
+    'InstanceSegMetric', 'WaymoMetric', 'PanopticSegMetric',
+    # Adding custom metric for Minerva Polimove
+    'MinervaMetric'
 ]

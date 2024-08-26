@@ -15,24 +15,6 @@ _base_ = [
 # How this file works:  - The dataset, training scheduler, and runtime are inherited from files in "_base_/..." 
 #                       - The NN model as a whole is described here
 
-
-
-
-
-
-# # dataset settings
-# dataset_type = 'MinervaLidarOnlyDataset'
-# data_root = 'data/minerva_polimove/'
-# class_names = ['Car']  # replace with your dataset class
-# input_modality = dict(use_lidar=True, use_camera=False)
-# metainfo = dict(classes=class_names)
-# default_backend_args = None
-
-
-
-
-
-
 point_cloud_range = [-80, -25, -1, 200, 25, 5]              ## Make sure is the same as reference value in "_base_/datasets/..."
 voxel_size = [0.16, 0.16, (point_cloud_range[5]-point_cloud_range[2])]
 
@@ -112,7 +94,7 @@ model = dict(
 
     train_cfg=dict(
         assigner=[
-            dict(                                           ## Tuning for validation of bboxes
+            dict(                                           ## Tuning for positive/negative score of bboxes
                 type='Max3DIoUAssigner',
                 iou_calculator=dict(type='mmdet3d.BboxOverlapsNearest3D'),
                 pos_iou_thr=0.6,
