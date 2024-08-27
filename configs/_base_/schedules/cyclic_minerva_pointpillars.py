@@ -7,8 +7,8 @@
 #                                   rather than the max learning rate.
 #                                   How the learning rate changes is defined by the parameter scheduler
 lr = 0.001
-epoch_num = 20
-validation_interval = 2
+epoch_num = 80
+validation_interval = 20
 # Comment on the max_norm by authors:   max_norm=35 is slightly better than 10 for PointPillars in the earlier
 #                                       development of the codebase thus we keep the setting. But we do not
 #                                       specifically tune this parameter.

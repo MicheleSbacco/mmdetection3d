@@ -1,7 +1,7 @@
 _base_ = [
     '../_base_/datasets/minerva_lidar_only_dataset.py',
     '../_base_/schedules/cyclic_minerva_pointpillars.py', 
-    '../_base_/default_runtime.py'
+    '../_base_/custom_runtime.py'
 ]
 
 
@@ -94,7 +94,7 @@ model = dict(
 
     train_cfg=dict(
         assigner=[
-            dict(                                           ## Tuning for positive/negative score of bboxes
+            dict(                                           ## Tuning for positive/negative score of bboxes (iou = intersection over union)
                 type='Max3DIoUAssigner',
                 iou_calculator=dict(type='mmdet3d.BboxOverlapsNearest3D'),
                 pos_iou_thr=0.6,
@@ -109,7 +109,10 @@ model = dict(
         use_rotate_nms=True,
         nms_across_levels=False,
         nms_thr=0.01,
-        score_thr=0.1,
+        # Parameter "score_thr" defines the minumum score that a bbox needs, in order to 
+        # be shown in the results of the inference
+        score_thr=0.2,
         min_bbox_size=0,
         nms_pre=100,
-        max_num=50))
+        # Number of "top bboxes" among which the "score_thr" is filtered
+        max_num=10))

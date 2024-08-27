@@ -71,7 +71,9 @@ db_sampler = dict(
     prepare=dict(
         filter_by_difficulty=[-1],                  # Try to leave it even though I don't have the parameter in
                                                     # the dataset
-        filter_by_min_points=dict(Car=5)),                          ## Can be adjusted in case of need
+        filter_by_min_points=dict(Car=5)),                          ## TODO: Check why a lot of cars seem to have less than 50 points. 
+                                                                    #  Check the "famous" function in the building of the dataset and 
+                                                                    #  see what does it say about the number of points in the bboxes.
     classes=class_names,
     sample_groups=dict(Car=15),
     points_loader=dict(
@@ -140,7 +142,6 @@ test_pipeline = [
             #                   - I tried to keep both, but the problem is the following. If you keep "ObjectRangeFilter" the 
             #                     transformer looks for the labels. But we did not upload them with "LoadAnnotations3D" so
             #                     it gives back an error...
-            #                   - TODO: Try to move them to the "outer" layer of the pipeline, not inside the transform 
             # dict(type='PointsRangeFilter', point_cloud_range=point_cloud_range),
             # dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range)
          ]),
@@ -148,20 +149,17 @@ test_pipeline = [
     dict(type='Pack3DDetInputs',                    
         keys=['points'])
 ]
-# TODO:     - understand what to do with point-cloud filtering of the two types
-#           - for now will upload them, just to be sure
+# For now undestood that:   - the only difference with "test_pipeline" is that here the "MultiScaleFlipAug3D" is 
+#                             not performed
+#                           - if add the "LoadAnnotations3D" then the eval_dataloader does not work, probably since 
+#                             they are not present in the ".pkl" file
 eval_pipeline = [
     dict(type='LoadPointsFromFile', 
         coord_type='LIDAR', 
         load_dim=4, 
         use_dim=4),
-    dict(type='LoadAnnotations3D',
-         with_bbox_3d=True,
-         with_label_3d=True),
     dict(type='Pack3DDetInputs',
-        keys=['points'
-               'gt_bboxes_3d',
-               'gt_labels_3d'])
+        keys=['points'])
 ]
 
 
@@ -202,12 +200,15 @@ val_dataloader = dict(
         data_root=data_root,
         data_prefix=dict(pts='training/velodyne'),      ## TODO (3)
         ann_file='minerva_polimove_infos_val.pkl',
-        pipeline=eval_pipeline,                                 ## Changed it to eval, before was test_pipeline and actually did not 
-                                                                #  really make much sense. 
-                                                                #  Even more so because the "..._pipeline" variables are used as temp 
-                                                                #  and not definitive variables.
+        pipeline=eval_pipeline,                             ## Changed it to eval, before was test_pipeline and actually did not 
+                                                            #  really make much sense. 
+                                                            #  Even more so because the "_pipeline" variables are used as temp 
+                                                            #  and not definitive variables.
         modality=input_modality,
-        test_mode=False,                                        ## Also has been changed here (together with the above)
+        test_mode=True,                         ## If put "False" then the dataloader tries to use annotations, but they are not 
+                                                #  present in the pipeline. 
+                                                #  At the same time, if try to add annotations in the pipeline gives error since
+                                                #  the ".pkl" file does not have them.
         metainfo=metainfo,
         box_type_3d='LiDAR'))
 test_dataloader = dict(
