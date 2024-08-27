@@ -16,6 +16,12 @@ from mmdet3d.registry import HOOKS
 from mmdet3d.structures import Det3DDataSample
 
 
+
+# Added import to be able to visualize the ground truth boxes
+from mmengine.structures import InstanceData
+
+
+
 @HOOKS.register_module()
 class Det3DVisualizationHook(Hook):
     """Detection Visualization Hook. Used to visualize validation and testing
@@ -142,6 +148,12 @@ class Det3DVisualizationHook(Hook):
             points = np.frombuffer(pts_bytes, dtype=np.float32)
             points = points.reshape(-1, num_pts_feats)
             data_input['points'] = points
+        
+        # New added part to visualize the "ground truth" bboxes
+        new_InstanceData = InstanceData()
+        new_InstanceData.bboxes_3d = outputs[0].eval_ann_info['gt_bboxes_3d']
+        new_InstanceData.labels_3d = outputs[0].eval_ann_info['gt_bboxes_labels']
+        outputs[0].gt_instances_3d = new_InstanceData
 
         if total_curr_iter % self.interval == 0:
             self._visualizer.add_datasample(

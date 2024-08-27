@@ -305,6 +305,12 @@ class Det3DLocalVisualizer(DetLocalVisualizer):
             rot_mat = geometry.get_rotation_matrix_from_xyz(yaw)
 
             if center_mode == 'lidar_bottom':
+                # Added part in case the bboxes have infinite values...
+                threshold_center = 200   ## Threshold for the height of the center
+                threshold_dimention = 200   ## Threshold for the vertical dimension
+                if abs(center[rot_axis])>threshold_center or abs(dim[rot_axis])>threshold_dimention:
+                    print("Infinite or too big value for bboxes: visualizer skipping the bbox")
+                    continue
                 # bottom center to gravity center
                 center[rot_axis] += dim[rot_axis] / 2
             elif center_mode == 'camera_bottom':
@@ -1001,7 +1007,8 @@ class Det3DLocalVisualizer(DetLocalVisualizer):
             if 'gt_instances_3d' in data_sample:
                 gt_data_3d = self._draw_instances_3d(
                     data_input, data_sample.gt_instances_3d,
-                    data_sample.metainfo, vis_task, show_pcd_rgb, palette)
+                    data_sample.metainfo, vis_task, show_pcd_rgb, [(0, 0, 255)])            ## Modified palette to make the "ground truth" bboxes 
+                                                                                            #  of color blue
             if 'gt_instances' in data_sample:
                 if len(data_sample.gt_instances) > 0:
                     assert 'img' in data_input
