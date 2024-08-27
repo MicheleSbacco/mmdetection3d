@@ -30,7 +30,7 @@ def _calculate_num_points_in_gt(data_path,
                                 use_images,
                                 remove_outside=True,
                                 num_features=4):
-    
+
     for info in mmengine.track_iter_progress(infos):
         # Initialize the processing of the point-cloud
         pc_info = info['point_cloud']
@@ -69,7 +69,20 @@ def _calculate_num_points_in_gt(data_path,
         else:
             gt_boxes = gt_boxes_camera
         # Count the number of LiDAR points in the point-cloud
-        indices = box_np_ops.points_in_rbbox(points_v[:, :3], gt_boxes)
+        #                       |
+        #                       |
+        #                       V
+        # Now have checked on SUSTechPoints on three files and it works (just some errors of 
+        # 2-3 points but nothing to be concerned). For reference leave the tested files with 
+        # corresponding values.
+        #   1723235842419750615.bin: [1033   32]
+        #   1723235505512511802.bin: [20]
+        #   1723235388718397661.bin: [ 215 4230]
+        #                       |
+        #                       |
+        #                       V
+        # Before adding in the part of "origin" it did NOT work
+        indices = box_np_ops.points_in_rbbox(points_v[:, :3], gt_boxes, origin=(0.5, 0.5, 0.5))
         num_points_in_gt = indices.sum(0)
         # Just add a "-1" for the instances of "Don't Care" class
         num_ignored = len(annos['dimensions']) - num_obj
