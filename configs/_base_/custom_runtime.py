@@ -11,11 +11,13 @@ default_hooks = dict(
         type='Det3DVisualizationHook',
         draw=True,
         interval=1,
-        score_thr = 0.1,
+        score_thr = 5e-7,               ## This is a SECONDARY filter, that acts after the one defined in the configuration in the
+                                        #  "test_cfg" field (inside "score_thr" parameter)
         show=True,
         vis_task='lidar_det',
-        wait_time=5.,
-        draw_gt=True
+        wait_time=7.5,
+        draw_gt=True,
+        draw_pred=True
         )
     )
 

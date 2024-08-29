@@ -7,12 +7,13 @@
 #                                   rather than the max learning rate.
 #                                   How the learning rate changes is defined by the parameter scheduler
 lr = 0.001
-epoch_num = 80
-validation_interval = 20
+epoch_num = 10
+validation_interval = 2
 # Comment on the max_norm by authors:   max_norm=35 is slightly better than 10 for PointPillars in the earlier
 #                                       development of the codebase thus we keep the setting. But we do not
 #                                       specifically tune this parameter.
 max_norm = 35
+
 
 
 
@@ -47,7 +48,7 @@ param_scheduler = [
 ###################################### LEARNING RATE
     dict(
         type='CosineAnnealingLR',
-        T_max=epoch_num * 0.4,
+        T_max=epoch_num,
         eta_min=lr * 10,
         begin=0,
         end=epoch_num * 0.4,
@@ -55,12 +56,22 @@ param_scheduler = [
         convert_to_iter_based=True),
     dict(
         type='CosineAnnealingLR',
-        T_max=epoch_num * 0.6,
-        eta_min=lr * 1e-4,
+        T_max=epoch_num,
+        eta_min=lr * 1e-3,
         begin=epoch_num * 0.4,
-        end=epoch_num * 1,
+        end=epoch_num,
         by_epoch=True,
         convert_to_iter_based=True),
+    # dict(
+    #     type = 'ConstantLR',
+    #     factor = 0.1,
+    #     begin = 0,
+    #     end = epoch_num*0.5),
+    # dict(
+    #     type = 'ConstantLR',
+    #     factor = 0.05,
+    #     begin = epoch_num*0.5,
+    #     end = epoch_num),
 
 ###################################### MOMENTUM
     # During the first 16 epochs, momentum increases from 0 to 0.85 / 0.95
@@ -104,4 +115,4 @@ test_cfg = dict()
 #   - `base_batch_size` = (4 GPUs)----------------->(num_workers in _base_/dataset)
 #                           x 
 #                         (4 samples per GPU)------>(batch_size in _base_/dataset)
-auto_scale_lr = dict(enable=False, base_batch_size=48)
+auto_scale_lr = dict(enable=False, base_batch_size=50)

@@ -15,9 +15,13 @@ _base_ = [
 # How this file works:  - The dataset, training scheduler, and runtime are inherited from files in "_base_/..." 
 #                       - The NN model as a whole is described here
 
-point_cloud_range = [-80, -25, -1, 200, 25, 5]              ## Make sure is the same as reference value in "_base_/datasets/..."
-voxel_size = [0.16, 0.16, (point_cloud_range[5]-point_cloud_range[2])]
-
+point_cloud_range = [-70, -20, -2, 150, 20, 5]              ## Make sure is the same as reference value in "_base_/datasets/..."
+voxel_size = [0.1, 0.1, 7]
+grid_output_size = [
+    int(  (point_cloud_range[3]-point_cloud_range[0])  /  voxel_size[0]),
+    int(  (point_cloud_range[4]-point_cloud_range[1])  /  voxel_size[1])
+]
+anchor_range = [-70, -20, -2.5, 150, 20, 2.5]
 
 
 
@@ -36,7 +40,7 @@ model = dict(
         type='Det3DDataPreprocessor',
         voxel=True,
         voxel_layer=dict(
-            max_num_points=32,  # max_points_per_voxel
+            max_num_points=64,                      ## Was originally 32
             point_cloud_range=point_cloud_range,
             voxel_size=voxel_size,
             max_voxels=(16000, 40000))),
@@ -48,7 +52,7 @@ model = dict(
         voxel_size=voxel_size,
         point_cloud_range=point_cloud_range),
     middle_encoder=dict(
-        type='PointPillarsScatter', in_channels=64, output_shape=[496, 432]),
+        type='PointPillarsScatter', in_channels=64, output_shape=grid_output_size),
     backbone=dict(
         type='SECOND',
         in_channels=64,
@@ -70,10 +74,10 @@ model = dict(
         anchor_generator=dict(
             type='AlignedAnchor3DRangeGenerator',
             ranges=[
-                [0, -39.68, -0.6, 69.12, 39.68, -0.6]                           ## Just one because it's just one class
+                anchor_range                            ## Just one because it's just one class
             ],
             sizes=[[5., 2., 1.5]],                                      ## Adapted to dimension of car
-            rotations=[-0.34, 0, 0.34],                                         ## Adapted to type of circuit: can be left just
+            rotations=[0, 1.57],                                         ## Adapted to type of circuit: can be left just
                                                                                 #  one with 0° of rotation 
             reshape_out=False),
         diff_rad_by_sin=True,
@@ -85,9 +89,12 @@ model = dict(
             alpha=0.25,
             loss_weight=1.0),
         loss_bbox=dict(
-            type='mmdet.SmoothL1Loss', beta=1.0 / 9.0, loss_weight=2.0),
+            type='mmdet.SmoothL1Loss', 
+            beta=1.0 / 9.0, 
+            loss_weight=2.0),
         loss_dir=dict(
-            type='mmdet.CrossEntropyLoss', use_sigmoid=False,
+            type='mmdet.CrossEntropyLoss', 
+            use_sigmoid=False,
             loss_weight=0.2)),
 
 ###################################################### TRAINING AND TESTING CONFIG
@@ -105,14 +112,17 @@ model = dict(
         allowed_border=0,
         pos_weight=-1,
         debug=False),
+    
+    # ATTENTION: This filter has the precedence over the one in the Visualization Hook. 
+    # The one in the hook is like a filter after the filter
     test_cfg=dict(
         use_rotate_nms=True,
         nms_across_levels=False,
         nms_thr=0.01,
         # Parameter "score_thr" defines the minumum score that a bbox needs, in order to 
         # be shown in the results of the inference
-        score_thr=0.2,
+        score_thr=5e-7,
         min_bbox_size=0,
         nms_pre=100,
         # Number of "top bboxes" among which the "score_thr" is filtered
-        max_num=10))
+        max_num=4))

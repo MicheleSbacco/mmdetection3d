@@ -46,7 +46,7 @@
 dataset_type = 'MinervaLidarOnlyDataset'
 data_root = 'data/minerva_polimove/'
 class_names = ['Car']  # replace with your dataset class
-point_cloud_range = [-80, -25, -1, 200, 25, 5]                  ## How to adjust? Use "tools/misc/browse_datase.py" after setting 
+point_cloud_range = [-70, -20, -2, 150, 20, 5]                  ## How to adjust? Use "tools/misc/browse_datase.py" after setting 
                                                                 #  the line "PointsRangeFilter" in test_pipeline to NON-commented
 input_modality = dict(use_lidar=True, use_camera=False)
 metainfo = dict(classes=class_names)
@@ -69,11 +69,9 @@ db_sampler = dict(
     info_path=data_root + 'minerva_polimove_dbinfos_train.pkl',
     rate=1.0,
     prepare=dict(
-        filter_by_difficulty=[-1],                  # Try to leave it even though I don't have the parameter in
-                                                    # the dataset
-        filter_by_min_points=dict(Car=5)),                          ## TODO: Check why a lot of cars seem to have less than 50 points. 
-                                                                    #  Check the "famous" function in the building of the dataset and 
-                                                                    #  see what does it say about the number of points in the bboxes.
+        filter_by_difficulty=[-1],                  # Does not give problems, even though I don't have the parameter in the dataset
+        filter_by_min_points=dict(Car=20)),                     # Can be used since the problem with the counting function in
+                                                                # the "data creation" pipeline has been fixed
     classes=class_names,
     sample_groups=dict(Car=15),
     points_loader=dict(
@@ -112,8 +110,10 @@ train_pipeline = [
     dict(type='GlobalRotScaleTrans',
          rot_range=[-0.78539816, 0.78539816],
          scale_ratio_range=[0.95, 1.05]),
-    dict(type='PointsRangeFilter', point_cloud_range=point_cloud_range),
-    dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range),
+    # Idea: maybe if I remove these for the training but then feed it for the testing and validation, the NN is not ready to 
+    # deal with the rest of the points
+    # dict(type='PointsRangeFilter', point_cloud_range=point_cloud_range),
+    # dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range),
     dict(type='PointShuffle'),
     dict(type='Pack3DDetInputs',
          keys=['points',
@@ -172,7 +172,7 @@ eval_pipeline = [
 '''
 
 train_dataloader = dict(
-    batch_size=4,
+    batch_size=1,
     num_workers=4,
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=True),
