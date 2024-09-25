@@ -242,7 +242,11 @@ class MinervaMetric(BaseMetric):
         new_dictionary['timestamp'] = str(data_sample['lidar_path']).split('/')[-1].split('.bin')[0]
         new_dictionary['pred_bboxes'] = data_sample['pred_instances_3d']['bboxes_3d'].tensor
         new_dictionary['pred_scores'] = data_sample['pred_instances_3d']['scores_3d']
-        new_dictionary['gt_bboxes'] = data_sample['eval_ann_info']['gt_bboxes_3d'].tensor
+        # If has been added to deal with Riccardo's pipeline
+        if data_sample['eval_ann_info'] is not None:
+            new_dictionary['gt_bboxes'] = data_sample['eval_ann_info']['gt_bboxes_3d'].tensor
+        else: 
+            new_dictionary['gt_bboxes'] = data_sample['gt_instances_3d']['bboxes_3d'].tensor
         # Append the dictionary to the list of dictionaries
         self.bboxes.append(new_dictionary)
 

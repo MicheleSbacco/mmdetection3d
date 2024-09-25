@@ -384,6 +384,89 @@ class Det3DDataset(BaseDataset):
 
         example = self.pipeline(input_dict)
 
+        print_bool1=False
+        print_bool2=False
+        if print_bool1:
+            print("--------------------------------------")
+            for key in example:
+                print(f"{key}:\n{example[key]}\n")
+# --------------------------------------
+# data_samples:
+# <Det3DDataSample(
+
+#     META INFORMATION
+#     pcd_rotation: tensor([[ 0.8648,  0.5022,  0.0000],
+#                 [-0.5022,  0.8648,  0.0000],
+#                 [ 0.0000,  0.0000,  1.0000]])
+#     pcd_trans: array([0., 0., 0.])
+#     lidar_path: 'data/minerva_polimove/training/velodyne/1723235688875941932.bin'
+#     box_mode_3d: <Box3DMode.LIDAR: 0>
+#     transformation_3d_flow: ['HF', 'R', 'S', 'T']
+#     num_pts_feats: 4
+#     pcd_horizontal_flip: True
+#     pcd_scale_factor: 1.023588805760562
+#     pcd_rotation_angle: 0.5260924930730853
+#     pcd_vertical_flip: False
+#     sample_idx: 43
+#     box_type_3d: <class 'mmdet3d.structures.bbox_3d.lidar_box3d.LiDARInstance3DBoxes'>
+
+#     DATA FIELDS
+#     gt_instances_3d: <InstanceData(
+        
+#             META INFORMATION
+        
+#             DATA FIELDS
+#             bboxes_3d: LiDARInstance3DBoxes(
+#                     tensor([[-10.6391, -16.6951,  -0.8738,   5.1179,   2.0472,   1.5354,   0.0665],
+#                         [ 17.8577,  -9.0236,  -0.5903,   5.1179,   2.0472,   1.5354,   0.4290],
+#                         [ 61.2299,  12.3549,   0.7351,   5.1179,   2.0472,   1.5354,  -0.1692],
+#                         [ 36.5086,   4.8370,   0.8967,   5.1179,   2.0472,   1.5354,  -0.2411],
+#                         [ 16.9802,  -2.7442,   0.2152,   5.1179,   2.0472,   1.5354,   0.3186],
+#                         [ -3.8598, -10.5862,   0.1480,   5.1179,   2.0472,   1.5354,   0.3426],
+#                         [  7.5200,  -5.4873,  -0.1209,   5.1179,   2.0472,   1.5354,   0.1558]]))
+#             labels_3d: tensor([0, 0, 0, 0, 0, 0, 0])
+#         ) at 0x7ed1ad168a60>
+#     gt_instances: <InstanceData(
+        
+#             META INFORMATION
+        
+#             DATA FIELDS
+#         ) at 0x7ed1ad168d90>
+#     eval_ann_info: None
+#     gt_pts_seg: <PointData(
+        
+#             META INFORMATION
+        
+#             DATA FIELDS
+#         ) at 0x7ed1ad169210>
+# ) at 0x7ed1ae195390>
+
+# inputs:
+# {'points': tensor([[  5.6716,   4.7023,  -0.3083,   0.1812],
+#         [  6.9479,  -4.8545,   0.2267,   0.6887],
+#         [ 33.7470, -18.4678,   0.6833,   0.2146],
+#         ...,
+#         [  6.9840,  -5.5199,   0.8828,   0.3459],
+#         [ -1.9120,   3.1297,   0.1040,   0.4133],
+#         [-14.8728,   2.1353,   1.1921,   0.2260]])}
+        if print_bool2:
+            print(example['data_samples'])
+            print()
+            print(example['data_samples'].gt_instances_3d)
+            print()
+# <InstanceData(
+
+#     META INFORMATION
+
+#     DATA FIELDS
+#     labels_3d: tensor([0, 0, 0])
+#     bboxes_3d: LiDARInstance3DBoxes(
+#             tensor([[57.1240,  3.6985,  0.5921,  4.8542,  1.9417,  1.4563,  0.6435],
+#                 [57.2152, -1.2450,  0.3419,  4.8542,  1.9417,  1.4563,  0.2932],
+#                 [13.5997,  7.2097, -0.5490,  4.8542,  1.9417,  1.4563, -0.6805]]))
+# ) at 0x7463f194d660>
+        # print(example['data_samples'].gt_instances_3d)
+        
         if not self.test_mode and self.filter_empty_gt:
             # after pipeline drop the example with empty annotations
             # return None to random another in `__getitem__`

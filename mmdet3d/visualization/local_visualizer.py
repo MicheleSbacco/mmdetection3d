@@ -38,6 +38,22 @@ except ImportError:
     o3d = geometry = Visualizer = None
 
 
+
+
+
+
+special_list = [
+    9999999979772057364, # 1723235779772057364
+    9999999903419228067, # 1723235503419228067
+    9999999928671113625, # 1723236128671113625
+    9999999989112341434 # 1723235689112341434
+    ]
+
+
+
+
+
+
 @VISUALIZERS.register_module()
 class Det3DLocalVisualizer(DetLocalVisualizer):
     """MMDetection3D Local Visualizer.
@@ -1005,6 +1021,36 @@ class Det3DLocalVisualizer(DetLocalVisualizer):
 
         if draw_gt and data_sample is not None:
             if 'gt_instances_3d' in data_sample:
+
+                
+                
+                
+                
+                
+                # Infer the timestamp of the sample, declare the boolean 
+                wanna_print = False
+                wanna_cheat = False
+                number = int(data_sample.lidar_path.split('/')[-1].replace('.bin', ''))
+
+                if wanna_print:
+                    # Standard method: the visualizer show the timestamp and says if it is in the "special list"
+                    if not wanna_cheat:
+                        print("\tVisualizing file with timestamp:\t%s" %number)
+                        if number in special_list:
+                            print("\t\tThis is a training image!!!")
+                    # Cheaty method: only the "special" values are shown
+                    else:
+                        if number in special_list:
+                            print("\t---------- Caught the right one: %s ----------" %number)
+                        else:
+                            print("\tSkipping %s..." %number)
+                            return
+                
+
+
+
+
+
                 gt_data_3d = self._draw_instances_3d(
                     data_input, data_sample.gt_instances_3d,
                     data_sample.metainfo, vis_task, show_pcd_rgb, [(0, 0, 255)])            ## Modified palette to make the "ground truth" bboxes 
@@ -1103,5 +1149,5 @@ class Det3DLocalVisualizer(DetLocalVisualizer):
             if drawn_img is not None:
                 mmcv.imwrite(drawn_img[..., ::-1],
                              out_file[:-4] + '_2d' + out_file[-4:])
-        else:
+        elif drawn_img_3d is not None:
             self.add_image(name, drawn_img_3d, step)
