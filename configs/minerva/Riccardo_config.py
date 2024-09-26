@@ -49,12 +49,12 @@ default_hooks = dict(
         draw=True,
         draw_gt=True,
         draw_pred=True,
-        interval=1,
-        score_thr=5e-07,
-        show=False,
+        interval=4,
+        score_thr=0,
+        show=True,
         type='Det3DVisualizationHook',
         vis_task='lidar_det',
-        wait_time=15))
+        wait_time=10))
 default_scope = 'mmdet3d'
 env_cfg = dict(
     cudnn_benchmark=False,
@@ -396,7 +396,7 @@ test_pipeline = [
     ], type='Pack3DDetInputs'),
 ]
 times = 1
-train_cfg = dict(by_epoch=True, max_epochs=160, val_interval=1)
+train_cfg = dict(by_epoch=True, max_epochs=160, val_interval=5)
 train_dataloader = dict(
     batch_size=2,
     dataset=dict(
@@ -441,7 +441,7 @@ train_dataloader = dict(
                             filter_by_difficulty=[
                                 -1,
                             ],
-                            filter_by_min_points=dict(Car=5)),
+                            filter_by_min_points=dict(Car=30)),
                         rate=1.0,
                         sample_groups=dict(Car=15)),
                     type='ObjectSample'),
@@ -534,7 +534,7 @@ train_pipeline = [
             prepare=dict(
                 filter_by_difficulty=[
                     -1,
-                ], filter_by_min_points=dict(Car=5)),
+                ], filter_by_min_points=dict(Car=30)),
             rate=1.0,
             sample_groups=dict(Car=15)),
         type='ObjectSample'),

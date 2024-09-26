@@ -1028,7 +1028,7 @@ class Det3DLocalVisualizer(DetLocalVisualizer):
                 
                 
                 # Infer the timestamp of the sample, declare the boolean 
-                wanna_print = False
+                wanna_print = True
                 wanna_cheat = False
                 number = int(data_sample.lidar_path.split('/')[-1].replace('.bin', ''))
 
