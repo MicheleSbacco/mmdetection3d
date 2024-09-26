@@ -242,11 +242,18 @@ class MinervaMetric(BaseMetric):
         new_dictionary['timestamp'] = str(data_sample['lidar_path']).split('/')[-1].split('.bin')[0]
         new_dictionary['pred_bboxes'] = data_sample['pred_instances_3d']['bboxes_3d'].tensor
         new_dictionary['pred_scores'] = data_sample['pred_instances_3d']['scores_3d']
-        # If has been added to deal with Riccardo's pipeline
-        if data_sample['eval_ann_info'] is not None:
-            new_dictionary['gt_bboxes'] = data_sample['eval_ann_info']['gt_bboxes_3d'].tensor
-        else: 
-            new_dictionary['gt_bboxes'] = data_sample['gt_instances_3d']['bboxes_3d'].tensor
+
+        # EXPLANATION:
+        #   - at beginning I just put the "eval_ann_info" key
+        #   - then I started using Riccardo's config and needed to add the "if" clause because the "eval_ann_info" was absent.
+        #   - after modifying Riccardo's config now it works properly even without the "if". It was probably a change in the 
+        #     dataloaders
+        new_dictionary['gt_bboxes'] = data_sample['eval_ann_info']['gt_bboxes_3d'].tensor   # PAY ATTENTION ALREADY CORRECTED
+        # if data_sample['eval_ann_info'] is not None:
+        #     new_dictionary['gt_bboxes'] = data_sample['eval_ann_info']['gt_bboxes_3d'].tensor
+        # else:
+        #     new_dictionary['gt_bboxes'] = data_sample['gt_instances_3d']['bboxes_3d'].tensor
+
         # Append the dictionary to the list of dictionaries
         self.bboxes.append(new_dictionary)
 
