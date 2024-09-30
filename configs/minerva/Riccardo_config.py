@@ -6,14 +6,7 @@ anchor_range = [
     19.84,
     -1.5,
 ]
-anchor_size = [
-    5,
-    2,
-    1.5,
-]
 auto_scale_lr = dict(base_batch_size=48, enable=False)
-backend_args = None
-batch_size = 2
 class_names = [
     'Car',
 ]
@@ -25,8 +18,7 @@ db_sampler = dict(
         'Car',
     ],
     data_root='data/minerva_polimove/',
-    info_path=
-    'data/minerva_polimove/minerva_polimove_dbinfos_train.pkl',
+    info_path='data/minerva_polimove/minerva_polimove_dbinfos_train.pkl',
     points_loader=dict(
         backend_args=None,
         coord_type='LIDAR',
@@ -36,7 +28,7 @@ db_sampler = dict(
     prepare=dict(
         filter_by_difficulty=[
             -1,
-        ], filter_by_min_points=dict(Car=5)),
+        ], filter_by_min_points=dict(Car=30)),
     rate=1.0,
     sample_groups=dict(Car=15))
 default_hooks = dict(
@@ -49,12 +41,12 @@ default_hooks = dict(
         draw=True,
         draw_gt=True,
         draw_pred=True,
-        interval=1,
+        interval=4,
         score_thr=0,
         show=True,
         type='Det3DVisualizationHook',
         vis_task='lidar_det',
-        wait_time=0.5))
+        wait_time=10))
 default_scope = 'mmdet3d'
 env_cfg = dict(
     cudnn_benchmark=False,
@@ -232,27 +224,23 @@ optim_wrapper = dict(
             0.99,
         ), lr=0.001, type='AdamW', weight_decay=0.01),
     type='OptimWrapper')
-output_shape = [
-    248,
-    1200,
-]
 param_scheduler = [
     dict(
+        type='CosineAnnealingLR',
         T_max=64.0,
-        begin=0,
-        by_epoch=True,
-        convert_to_iter_based=True,
-        end=64.0,
         eta_min=0.01,
-        type='CosineAnnealingLR'),
-    dict(
-        T_max=96.0,
-        begin=64.0,
+        begin=0,
+        end=64.0,
         by_epoch=True,
-        convert_to_iter_based=True,
-        end=160,
+        convert_to_iter_based=True),
+    dict(
+        type='CosineAnnealingLR',
+        T_max=96.0,
         eta_min=1.0000000000000001e-07,
-        type='CosineAnnealingLR'),
+        begin=64.0,
+        end=160,
+        by_epoch=True,
+        convert_to_iter_based=True),
     dict(
         T_max=64.0,
         begin=0,
@@ -283,7 +271,6 @@ test_dataloader = dict(
     batch_size=1,
     dataset=dict(
         ann_file='minerva_polimove_infos_val.pkl',
-        backend_args=None,
         box_type_3d='LiDAR',
         data_prefix=dict(pts='training/velodyne'),
         data_root='data/minerva_polimove/',
@@ -293,7 +280,6 @@ test_dataloader = dict(
         modality=dict(use_camera=False, use_lidar=True),
         pipeline=[
             dict(
-                backend_args=None,
                 coord_type='LIDAR',
                 load_dim=4,
                 type='LoadPointsFromFile',
@@ -322,16 +308,6 @@ test_dataloader = dict(
                         ],
                         type='GlobalRotScaleTrans'),
                     dict(type='RandomFlip3D'),
-                    dict(
-                        point_cloud_range=[
-                            -92,
-                            -19.84,
-                            -4,
-                            100,
-                            19.84,
-                            5,
-                        ],
-                        type='PointsRangeFilter'),
                 ],
                 type='MultiScaleFlipAug3D'),
             dict(keys=[
@@ -349,12 +325,7 @@ test_evaluator = dict(
     metric='bbox',
     type='MinervaMetric')
 test_pipeline = [
-    dict(
-        backend_args=None,
-        coord_type='LIDAR',
-        load_dim=4,
-        type='LoadPointsFromFile',
-        use_dim=4),
+    dict(coord_type='LIDAR', load_dim=4, type='LoadPointsFromFile', use_dim=4),
     dict(
         flip=False,
         img_scale=(
@@ -395,14 +366,12 @@ test_pipeline = [
         'points',
     ], type='Pack3DDetInputs'),
 ]
-times = 1
 train_cfg = dict(by_epoch=True, max_epochs=160, val_interval=5)
 train_dataloader = dict(
     batch_size=2,
     dataset=dict(
         dataset=dict(
             ann_file='minerva_polimove_infos_train.pkl',
-            backend_args=None,
             box_type_3d='LiDAR',
             data_prefix=dict(pts='training/velodyne'),
             data_root='data/minerva_polimove/',
@@ -427,8 +396,7 @@ train_dataloader = dict(
                         classes=[
                             'Car',
                         ],
-                        data_root=
-                        'data/minerva_polimove/',
+                        data_root='data/minerva_polimove/',
                         info_path=
                         'data/minerva_polimove/minerva_polimove_dbinfos_train.pkl',
                         points_loader=dict(

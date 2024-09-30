@@ -1,10 +1,10 @@
 anchor_range = [
-    -50,
-    -20,
-    0.0,
-    100,
-    20,
-    0.0,
+    -90,
+    -28.8,
+    -1,
+    166,
+    28.8,
+    -1,
 ]
 auto_scale_lr = dict(base_batch_size=50, enable=False)
 class_names = [
@@ -31,7 +31,6 @@ db_sampler = dict(
         ], filter_by_min_points=dict(Car=30)),
     rate=1.0,
     sample_groups=dict(Car=15))
-default_backend_args = None
 default_hooks = dict(
     checkpoint=dict(interval=-1, type='CheckpointHook'),
     logger=dict(interval=50, type='LoggerHook'),
@@ -42,35 +41,30 @@ default_hooks = dict(
         draw=True,
         draw_gt=True,
         draw_pred=True,
-        interval=1,
-        score_thr=5e-07,
+        interval=4,
+        score_thr=0,
         show=True,
         type='Det3DVisualizationHook',
         vis_task='lidar_det',
-        wait_time=15))
+        wait_time=10))
 default_scope = 'mmdet3d'
 env_cfg = dict(
     cudnn_benchmark=False,
     dist_cfg=dict(backend='nccl'),
     mp_cfg=dict(mp_start_method='fork', opencv_num_threads=0))
-epoch_num = 30
+epoch_num = 120
 eval_pipeline = [
     dict(coord_type='LIDAR', load_dim=4, type='LoadPointsFromFile', use_dim=4),
     dict(keys=[
         'points',
     ], type='Pack3DDetInputs'),
 ]
-grid_output_size = [
-    880,
-    160,
-]
 input_modality = dict(use_camera=False, use_lidar=True)
 launcher = 'none'
 load_from = None
 log_level = 'INFO'
 log_processor = dict(by_epoch=True, type='LogProcessor', window_size=50)
-lr = 0.0001
-max_norm = 5
+lr = 0.001
 metainfo = dict(classes=[
     'Car',
 ])
@@ -97,23 +91,23 @@ model = dict(
         anchor_generator=dict(
             ranges=[
                 [
-                    -50,
-                    -20,
-                    0.0,
-                    100,
-                    20,
-                    0.0,
+                    -90,
+                    -28.8,
+                    -1,
+                    166,
+                    28.8,
+                    -1,
                 ],
             ],
-            reshape_out=False,
+            reshape_out=True,                              ###### ATTENTION: This may be it --> Trying to change --> Probably non it
             rotations=[
                 0,
                 1.57,
             ],
             sizes=[
                 [
-                    5.0,
-                    2.0,
+                    5,
+                    2,
                     1.5,
                 ],
             ],
@@ -135,35 +129,35 @@ model = dict(
             use_sigmoid=True),
         loss_dir=dict(
             loss_weight=0.2, type='mmdet.CrossEntropyLoss', use_sigmoid=False),
-        num_classes=3,
+        num_classes=1,
         type='Anchor3DHead',
         use_direction_classifier=True),
     data_preprocessor=dict(
         type='Det3DDataPreprocessor',
         voxel=True,
         voxel_layer=dict(
-            max_num_points=64,
+            max_num_points=32,
             max_voxels=(
-                16000,
+                20000,
                 40000,
             ),
             point_cloud_range=[
-                -70,
-                -20,
+                -90,
+                -28.8,
                 -2,
-                150,
-                20,
+                166,
+                28.8,
                 5,
             ],
             voxel_size=[
-                0.25,
-                0.25,
+                0.16,
+                0.16,
                 7,
             ])),
     middle_encoder=dict(
-        in_channels=64, output_shape=[
-            880,
-            160,
+        in_channels=64, output_shape=[                      ###### ATTENTION: This may be it, Rick has it swapped --> Trying to change
+            400,
+            1600,
         ], type='PointPillarsScatter'),
     neck=dict(
         in_channels=[
@@ -183,24 +177,22 @@ model = dict(
             4,
         ]),
     test_cfg=dict(
-        max_num=4,
+        max_num=1,
         min_bbox_size=0,
         nms_across_levels=False,
-        nms_pre=100,
+        nms_pre=10,
         nms_thr=0.01,
-        score_thr=5e-07,
+        score_thr=0,
         use_rotate_nms=True),
     train_cfg=dict(
         allowed_border=0,
-        assigner=[
-            dict(
-                ignore_iof_thr=-1,
-                iou_calculator=dict(type='mmdet3d.BboxOverlapsNearest3D'),
-                min_pos_iou=0.45,
-                neg_iou_thr=0.45,
-                pos_iou_thr=0.6,
-                type='Max3DIoUAssigner'),
-        ],
+        assigner=dict(
+            ignore_iof_thr=-1,
+            iou_calculator=dict(type='mmdet3d.BboxOverlapsNearest3D'),
+            min_pos_iou=0.45,
+            neg_iou_thr=0.45,
+            pos_iou_thr=0.6,
+            type='Max3DIoUAssigner'),
         debug=False,
         pos_weight=-1),
     type='VoxelNet',
@@ -210,52 +202,67 @@ model = dict(
         ],
         in_channels=4,
         point_cloud_range=[
-            -70,
-            -20,
+            -90,
+            -28.8,
             -2,
-            150,
-            20,
+            166,
+            28.8,
             5,
         ],
         type='PillarFeatureNet',
         voxel_size=[
-            0.25,
-            0.25,
+            0.16,
+            0.16,
             7,
         ],
         with_distance=False))
 optim_wrapper = dict(
-    clip_grad=dict(max_norm=5, norm_type=2),
+    clip_grad=dict(max_norm=35, norm_type=2),
     optimizer=dict(
         betas=(
             0.95,
             0.99,
-        ), lr=0.0001, type='AdamW', weight_decay=0.01),
+        ), lr=0.001, type='AdamW', weight_decay=0.01),
     type='OptimWrapper')
 param_scheduler = [
-    dict(begin=0, end=30, factor=1, type='ConstantLR'),
     dict(
-        T_max=12.0,
+        type='CosineAnnealingLR',
+        T_max=48,
+        eta_min=0.01,
+        begin=0,
+        end=48,
+        by_epoch=True,
+        convert_to_iter_based=True),
+    dict(
+        type='CosineAnnealingLR',
+        T_max=72,
+        eta_min=1.0000000000000001e-07,
+        begin=48,
+        end=120,
+        by_epoch=True,
+        convert_to_iter_based=True),
+    dict(
+        T_max=48,
         begin=0,
         by_epoch=True,
         convert_to_iter_based=True,
-        end=12.0,
+        end=48,
         eta_min=0.8947368421052632,
         type='CosineAnnealingMomentum'),
     dict(
-        T_max=18.0,
-        begin=12.0,
+        T_max=72,
+        begin=48,
         convert_to_iter_based=True,
-        end=30,
+        end=120,
         eta_min=1,
         type='CosineAnnealingMomentum'),
 ]
-point_cloud_range = [
-    -70,
-    -20,
+point_cloud_range=[
+    -90,
+    -28.8,
     -2,
-    150,
-    20,
+    166,
+    28.8,
     5,
 ]
 resume = False
@@ -307,7 +314,7 @@ test_dataloader = dict(
                 'points',
             ], type='Pack3DDetInputs'),
         ],
-        test_mode=True,
+        test_mode=True,                                                 ###### ATTENTION: This may be it
         type='MinervaLidarOnlyDataset'),
     drop_last=False,
     num_workers=1,
@@ -349,9 +356,9 @@ test_pipeline = [
         'points',
     ], type='Pack3DDetInputs'),
 ]
-train_cfg = dict(by_epoch=True, max_epochs=30, val_interval=3)
+train_cfg = dict(by_epoch=True, max_epochs=120, val_interval=12)
 train_dataloader = dict(
-    batch_size=1,
+    batch_size=2,
     dataset=dict(
         dataset=dict(
             ann_file='minerva_polimove_infos_train.pkl',
@@ -395,8 +402,25 @@ train_dataloader = dict(
                             filter_by_min_points=dict(Car=30)),
                         rate=1.0,
                         sample_groups=dict(Car=15)),
-                    type='ObjectSample',
-                    use_ground_plane=False),
+                    use_ground_plane=False,                         ###### ATTENTION: This may be it: Riccardo does not have it --> Probably not it, 
+                                                                    #                 since it defaults to "False"
+                    type='ObjectSample'),
+                dict(
+                    global_rot_range=[
+                        0.0,
+                        0.0,
+                    ],
+                    num_try=100,
+                    rot_range=[
+                        -0.78539816,
+                        0.78539816,
+                    ],
+                    translation_std=[
+                        1.0,
+                        1.0,
+                        0.5,
+                    ],
+                    type='ObjectNoise'),
                 dict(flip_ratio_bev_horizontal=0.5, type='RandomFlip3D'),
                 dict(
                     rot_range=[
@@ -408,6 +432,26 @@ train_dataloader = dict(
                         1.05,
                     ],
                     type='GlobalRotScaleTrans'),
+                dict(
+                    point_cloud_range=[
+                        -90,
+                        -28.8,
+                        -2,
+                        166,
+                        28.8,
+                        5,
+                    ],
+                    type='PointsRangeFilter'),
+                dict(
+                    point_cloud_range=[
+                        -90,
+                        -28.8,
+                        -2,
+                        166,
+                        28.8,
+                        5,
+                    ],
+                    type='ObjectRangeFilter'),
                 dict(type='PointShuffle'),
                 dict(
                     keys=[
@@ -419,7 +463,7 @@ train_dataloader = dict(
             ],
             test_mode=False,
             type='MinervaLidarOnlyDataset'),
-        times=2,
+        times=1,
         type='RepeatDataset'),
     num_workers=4,
     persistent_workers=True,
@@ -453,8 +497,25 @@ train_pipeline = [
                 ], filter_by_min_points=dict(Car=30)),
             rate=1.0,
             sample_groups=dict(Car=15)),
-        type='ObjectSample',
-        use_ground_plane=False),
+        use_ground_plane=False,                                     ###### ATTENTION: This may be it: Riccardo does not have it --> Probably not it, 
+                                                                    #                 since it defaults to "False"
+        type='ObjectSample'),
+    dict(
+        global_rot_range=[
+            0.0,
+            0.0,
+        ],
+        num_try=100,
+        rot_range=[
+            -0.78539816,
+            0.78539816,
+        ],
+        translation_std=[
+            1.0,
+            1.0,
+            0.5,
+        ],
+        type='ObjectNoise'),
     dict(flip_ratio_bev_horizontal=0.5, type='RandomFlip3D'),
     dict(
         rot_range=[
@@ -466,6 +527,26 @@ train_pipeline = [
             1.05,
         ],
         type='GlobalRotScaleTrans'),
+    dict(
+        point_cloud_range=[
+            -90,
+            -28.8,
+            -2,
+            166,
+            28.8,
+            5,
+        ],
+        type='PointsRangeFilter'),
+    dict(
+        point_cloud_range=[
+            -90,
+            -28.8,
+            -2,
+            166,
+            28.8,
+            5,
+        ],
+        type='ObjectRangeFilter'),
     dict(type='PointShuffle'),
     dict(
         keys=[
@@ -507,7 +588,6 @@ val_evaluator = dict(
     ann_file='data/minerva_polimove/minerva_polimove_infos_val.pkl',
     metric='bbox',
     type='MinervaMetric')
-validation_interval = 3
 vis_backends = [
     dict(type='LocalVisBackend'),
 ]
@@ -518,8 +598,8 @@ visualizer = dict(
         dict(type='LocalVisBackend'),
     ])
 voxel_size = [
-    0.25,
-    0.25,
+    0.16,
+    0.16,
     7,
 ]
 work_dir = './work_dirs/pointpillars_minerva'
