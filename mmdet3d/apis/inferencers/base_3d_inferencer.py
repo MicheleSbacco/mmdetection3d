@@ -313,6 +313,11 @@ class Base3DInferencer(BaseInferencer):
                 'scores_3d': pred_instances_3d.scores_3d.tolist(),
                 'bboxes_3d': pred_instances_3d.bboxes_3d.tensor.cpu().tolist()
             }
+            # Added part to allow the visualization
+            if 'lidar_path' in data_sample:
+                result['lidar_path'] = data_sample.lidar_path
+            if 'img_path' in data_sample:
+                result['img_path'] = data_sample.img_path
 
         if 'pred_pts_seg' in data_sample:
             pred_pts_seg = data_sample.pred_pts_seg.numpy()

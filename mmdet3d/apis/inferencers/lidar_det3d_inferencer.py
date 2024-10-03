@@ -201,10 +201,11 @@ class LidarDet3DInferencer(Base3DInferencer):
             )
             results.append(points)
             self.num_visualized_frames += 1
+        if return_vis:                                      ## Added the "if", otherwise it would return the point_cloud for no reason...
+            return results
 
-        return results
-
-    def visualize_preds_fromfile(self, inputs: InputsType, preds: PredType,
+    # Changed the function, so it does not need the inputs anymore (see also return)
+    def visualize_preds_fromfile(self, preds: PredType,
                                  **kwargs) -> Union[List[np.ndarray], None]:
         """Visualize predictions from `*.json` files.
 
@@ -221,6 +222,12 @@ class LidarDet3DInferencer(Base3DInferencer):
             pred = mmengine.load(pred)
             data_sample = Det3DDataSample()
             data_sample.pred_instances_3d = InstanceData()
+
+            # Added part to allow the visualization
+            #
+            # UPDATE: probably no need for image because the inferencer is for lidar
+            if 'lidar_path' in pred:
+                data_sample.lidar_path = pred['lidar_path']
 
             data_sample.pred_instances_3d.labels_3d = torch.tensor(
                 pred['labels_3d'])
@@ -239,4 +246,5 @@ class LidarDet3DInferencer(Base3DInferencer):
                 raise ValueError('Unsupported box type: '
                                  f'{pred["box_type_3d"]}')
             data_samples.append(data_sample)
-        return self.visualize(inputs=inputs, preds=data_samples, **kwargs)
+        # Changed the function, so it does not need the inputs anymore (see also arguments)
+        return self.visualize(inputs=[{'points': sample.lidar_path} for sample in data_samples], preds=data_samples, **kwargs)
