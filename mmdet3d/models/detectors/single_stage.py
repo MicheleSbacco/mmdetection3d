@@ -9,6 +9,9 @@ from mmdet3d.utils import ConfigType, OptConfigType, OptMultiConfig
 from ...structures.det3d_data_sample import OptSampleList, SampleList
 from .base import Base3DDetector
 
+# Added import for the computation of time
+import time
+wanna_print = True
 
 @MODELS.register_module()
 class SingleStage3DDetector(Base3DDetector):
@@ -107,7 +110,15 @@ class SingleStage3DDetector(Base3DDetector):
                     (num_instances, C) where C >=7.
         """
         x = self.extract_feat(batch_inputs_dict)
+        if wanna_print:                                                                                             # Added for time computation (ONLY PREDICTION, NO TRAINING)
+            out_file = '/home/michele/iac_code/michele_mmdet3d/data/minerva_polimove/inference_times.txt'
+            begin = time.time()
         results_list = self.bbox_head.predict(x, batch_data_samples, **kwargs)
+        if wanna_print:                                                                                             # Added for time computation (ONLY PREDICTION, NO TRAINING)
+            end = time.time()
+            # print(f"\tTime for post-processing: {end-begin}. Start of post-processing: {begin}\n")
+            with open(out_file, "a") as file:
+                file.write(f"\tTime for post-processing: {end-begin}. Start of post-processing: {begin}")
         predictions = self.add_pred_to_datasample(batch_data_samples,
                                                   results_list)
         return predictions
