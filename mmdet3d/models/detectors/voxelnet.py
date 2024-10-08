@@ -8,8 +8,8 @@ from mmdet3d.utils import ConfigType, OptConfigType, OptMultiConfig
 from .single_stage import SingleStage3DDetector
 
 # Added import for the computation of time
+from demo.json_handler import JSONHandler
 import time
-wanna_print = True
 
 @MODELS.register_module()
 class VoxelNet(SingleStage3DDetector):
@@ -38,42 +38,35 @@ class VoxelNet(SingleStage3DDetector):
 
     def extract_feat(self, batch_inputs_dict: dict) -> Tuple[Tensor]:
         """Extract features from points."""
+        
+        # Added lines to initialize the handler, for time computation
+        out_file = '/home/michele/iac_code/michele_mmdet3d/data/minerva_polimove/inference_times.json'
+        handler = JSONHandler(out_file)
+        
         voxel_dict = batch_inputs_dict['voxels']
-        if wanna_print:                                                                                                     # Added for time computation
-            out_file = '/home/michele/iac_code/michele_mmdet3d/data/minerva_polimove/inference_times.txt'
-            vox_enc = time.time()
+        vox_enc0 = time.time()                                              # Added for time computation
         voxel_features = self.voxel_encoder(voxel_dict['voxels'],
                                             voxel_dict['num_points'],
                                             voxel_dict['coors'])
-        if wanna_print:                                                                                                     # Added for time computation
-            vox_enc1 = time.time()
-            # print(f"\tTime for voxel encoder: {vox_enc1-vox_enc}. Start of voxel encoder: {vox_enc}")
-            with open(out_file, "a") as file:
-                file.write(f"\tTime for voxel encoder: {vox_enc1-vox_enc}. Start of voxel encoder: {vox_enc}\n")
+        vox_enc1 = time.time()                                              # Added for time computation
         batch_size = voxel_dict['coors'][-1, 0].item() + 1
-        if wanna_print:                                                                                                     # Added for time computation
-            mid_enc = time.time()
+        mid_enc0 = time.time()                                              # Added for time computation
         x = self.middle_encoder(voxel_features, voxel_dict['coors'],
                                 batch_size)
-        if wanna_print:                                                                                                     # Added for time computation
-            mid_enc1 = time.time()
-            # print(f"\tTime for middle encoder: {mid_enc1-mid_enc}. Start of middle encoder: {mid_enc}")
-            with open(out_file, "a") as file:
-                file.write(f"\tTime for middle encoder: {mid_enc1-mid_enc}. Start of middle encoder: {mid_enc}\n")
-            back_bone = time.time()
+        mid_enc1 = time.time()                                              # Added for time computation
+        back_bone0 = time.time()                                            # Added for time computation
         x = self.backbone(x)
-        if wanna_print:                                                                                                     # Added for time computation
-            back_bone1 = time.time()
-            # print(f"\tTime for backbone: {back_bone1-back_bone}. Start of backbone: {back_bone}")
-            with open(out_file, "a") as file:
-                file.write(f"\tTime for backbone: {back_bone1-back_bone}. Start of backbone: {back_bone}\n")
+        back_bone1 = time.time()                                            # Added for time computation
         if self.with_neck:
-            if wanna_print:                                                                                                 # Added for time computation
-                neck = time.time()
+            neck0 = time.time()                                             # Added for time computation
             x = self.neck(x)
-            if wanna_print:                                                                                                 # Added for time computation
-                neck1 = time.time()
-                # print(f"\tTime for neck: {neck1-neck}. Start of neck: {neck}")
-                with open(out_file, "a") as file:
-                    file.write(f"\tTime for neck: {neck1-neck}. Start of neck: {neck}\n")
+            neck1 = time.time()                                             # Added for time computation
+        
+        # Added lines to handle the json file
+        handler.update_dictionary({'Voxel encoder start': vox_enc0,
+                                   'Voxel encoder delta_t': (vox_enc1-vox_enc0),
+                                   'Middle encoder delta_t': (mid_enc1-mid_enc0),
+                                   'Backbone delta_t': (back_bone1-back_bone0),
+                                   'Neck delta_t': (neck1-neck0)})
+
         return x

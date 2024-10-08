@@ -56,6 +56,8 @@ class JSONHandler:
 
         # Check if the file contains at least one dictionary
         if not data:
+            if self.wanna_print:
+                print("Could not find a dictionary...")
             return
 
         # Update the last dictionary with the new data

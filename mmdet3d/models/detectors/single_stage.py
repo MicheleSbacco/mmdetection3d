@@ -11,7 +11,7 @@ from .base import Base3DDetector
 
 # Added import for the computation of time
 import time
-wanna_print = True
+from demo.json_handler import JSONHandler
 
 @MODELS.register_module()
 class SingleStage3DDetector(Base3DDetector):
@@ -109,18 +109,20 @@ class SingleStage3DDetector(Base3DDetector):
                 - bboxes_3d (Tensor): Contains a tensor with shape
                     (num_instances, C) where C >=7.
         """
+        # Added lines to initialize the handler, for time computation
+        out_file = '/home/michele/iac_code/michele_mmdet3d/data/minerva_polimove/inference_times.json'
+        handler = JSONHandler(out_file)
+        
         x = self.extract_feat(batch_inputs_dict)
-        if wanna_print:                                                                                             # Added for time computation (ONLY PREDICTION, NO TRAINING)
-            out_file = '/home/michele/iac_code/michele_mmdet3d/data/minerva_polimove/inference_times.txt'
-            begin = time.time()
+        begin = time.time()                                                             # Added for time computation (ONLY PREDICTION, NO TRAINING)
         results_list = self.bbox_head.predict(x, batch_data_samples, **kwargs)
-        if wanna_print:                                                                                             # Added for time computation (ONLY PREDICTION, NO TRAINING)
-            end = time.time()
-            # print(f"\tTime for post-processing: {end-begin}. Start of post-processing: {begin}\n")
-            with open(out_file, "a") as file:
-                file.write(f"\tTime for post-processing: {end-begin}. Start of post-processing: {begin}")
+        end = time.time()                                                               # Added for time computation (ONLY PREDICTION, NO TRAINING)
         predictions = self.add_pred_to_datasample(batch_data_samples,
                                                   results_list)
+        
+        # Added line to handle the json file
+        handler.update_dictionary({'Post-processing delta_t': (end-begin)})
+        
         return predictions
 
     def _forward(self,
