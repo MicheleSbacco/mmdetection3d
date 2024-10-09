@@ -70,7 +70,7 @@ db_sampler = dict(
     rate=1.0,
     prepare=dict(
         filter_by_difficulty=[-1],                  # Does not give problems, even though I don't have the parameter in the dataset
-        filter_by_min_points=dict(Car=20)),                     # Can be used since the problem with the counting function in
+        filter_by_min_points=dict(Car=30)),                     # Can be used since the problem with the counting function in
                                                                 # the "data creation" pipeline has been fixed
     classes=class_names,
     sample_groups=dict(Car=15),

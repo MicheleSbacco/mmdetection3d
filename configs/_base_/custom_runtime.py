@@ -15,7 +15,7 @@ default_hooks = dict(
                                         #  "test_cfg" field (inside "score_thr" parameter)
         show=True,
         vis_task='lidar_det',
-        wait_time=7.5,
+        wait_time=15,
         draw_gt=True,
         draw_pred=True
         )
@@ -31,6 +31,7 @@ log_processor = dict(type='LogProcessor', window_size=50, by_epoch=True)
 
 log_level = 'INFO'
 load_from = None
-resume = False
+resume = False                  # Important: needed to go on from the most recent file.
+                                # Could be really useful!
 
 # TODO: support auto scaling lr

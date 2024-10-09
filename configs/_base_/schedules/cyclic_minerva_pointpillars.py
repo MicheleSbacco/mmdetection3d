@@ -6,13 +6,13 @@
 # Comment on the lr by authors:     The learning rate set in the cyclic schedule is the initial learning rate  
 #                                   rather than the max learning rate.
 #                                   How the learning rate changes is defined by the parameter scheduler
-lr = 0.001
-epoch_num = 10
-validation_interval = 2
+lr = 0.0001
+epoch_num = 30
+validation_interval = 3
 # Comment on the max_norm by authors:   max_norm=35 is slightly better than 10 for PointPillars in the earlier
 #                                       development of the codebase thus we keep the setting. But we do not
 #                                       specifically tune this parameter.
-max_norm = 35
+max_norm = 5
 
 
 
@@ -46,22 +46,41 @@ optim_wrapper = dict(
 param_scheduler = [
 
 ###################################### LEARNING RATE
+                                                                ########### KITTY STYLE
+    # dict(
+    #     type='CosineAnnealingLR',
+    #     T_max=epoch_num,
+    #     eta_min=lr * 10,
+    #     begin=0,
+    #     end=epoch_num * 0.4,
+    #     by_epoch=True,
+    #     convert_to_iter_based=True),
+    # dict(
+    #     type='CosineAnnealingLR',
+    #     T_max=epoch_num,
+    #     eta_min=lr * 1e-3,
+    #     begin=epoch_num * 0.4,
+    #     end=epoch_num,
+    #     by_epoch=True,
+    #     convert_to_iter_based=True),
+                                                                ########### CONSTANT, HALF L.R. AT HALF PATH
+    # dict(
+    #     type = 'ConstantLR',
+    #     factor = 1,
+    #     begin = 0,
+    #     end = epoch_num*0.5),
+    # dict(
+    #     type = 'ConstantLR',
+    #     factor = 0.5,
+    #     begin = epoch_num*0.5,
+    #     end = epoch_num),
+                                                                ########### ALWAYS CONSTANT
     dict(
-        type='CosineAnnealingLR',
-        T_max=epoch_num,
-        eta_min=lr * 10,
-        begin=0,
-        end=epoch_num * 0.4,
-        by_epoch=True,
-        convert_to_iter_based=True),
-    dict(
-        type='CosineAnnealingLR',
-        T_max=epoch_num,
-        eta_min=lr * 1e-3,
-        begin=epoch_num * 0.4,
-        end=epoch_num,
-        by_epoch=True,
-        convert_to_iter_based=True),
+        type = 'ConstantLR',
+        factor = 1,
+        begin = 0,
+        end = epoch_num),
+                                                                ########### CONSTANT, INCREASING OF x10 FACTOR
     # dict(
     #     type = 'ConstantLR',
     #     factor = 0.1,
@@ -69,7 +88,7 @@ param_scheduler = [
     #     end = epoch_num*0.5),
     # dict(
     #     type = 'ConstantLR',
-    #     factor = 0.05,
+    #     factor = 1,
     #     begin = epoch_num*0.5,
     #     end = epoch_num),
 

@@ -28,7 +28,7 @@ db_sampler = dict(
     prepare=dict(
         filter_by_difficulty=[
             -1,
-        ], filter_by_min_points=dict(Car=30)),
+        ], filter_by_min_points=dict(Car=15)),
     rate=1.0,
     sample_groups=dict(Car=15))
 default_hooks = dict(
@@ -52,7 +52,7 @@ env_cfg = dict(
     cudnn_benchmark=False,
     dist_cfg=dict(backend='nccl'),
     mp_cfg=dict(mp_start_method='fork', opencv_num_threads=0))
-epoch_num = 120
+epoch_num = 1
 eval_pipeline = [
     dict(coord_type='LIDAR', load_dim=4, type='LoadPointsFromFile', use_dim=4),
     dict(keys=[
@@ -99,7 +99,7 @@ model = dict(
                     -1,
                 ],
             ],
-            reshape_out=True,                              ###### ATTENTION: This may be it --> Trying to change --> Probably non it
+            reshape_out=True,
             rotations=[
                 0,
                 1.57,
@@ -155,7 +155,7 @@ model = dict(
                 7,
             ])),
     middle_encoder=dict(
-        in_channels=64, output_shape=[                      ###### ATTENTION: This may be it, Rick has it swapped --> Trying to change
+        in_channels=64, output_shape=[
             400,
             1600,
         ], type='PointPillarsScatter'),
@@ -177,7 +177,7 @@ model = dict(
             4,
         ]),
     test_cfg=dict(
-        max_num=1,
+        max_num=6,
         min_bbox_size=0,
         nms_across_levels=False,
         nms_pre=10,
@@ -227,31 +227,62 @@ optim_wrapper = dict(
 param_scheduler = [
     dict(
         type='CosineAnnealingLR',
-        T_max=48,
+        T_max=24,
         eta_min=0.01,
         begin=0,
-        end=48,
+        end=24,
         by_epoch=True,
         convert_to_iter_based=True),
     dict(
         type='CosineAnnealingLR',
-        T_max=72,
+        T_max=36,
         eta_min=1.0000000000000001e-07,
-        begin=48,
+        begin=24,
+        end=60,
+        by_epoch=True,
+        convert_to_iter_based=True),
+    dict(
+        type='CosineAnnealingLR',
+        T_max=24,
+        eta_min=0.01,
+        begin=60,
+        end=84,
+        by_epoch=True,
+        convert_to_iter_based=True),
+    dict(
+        type='CosineAnnealingLR',
+        T_max=36,
+        eta_min=1.0000000000000001e-07,
+        begin=84,
         end=120,
         by_epoch=True,
         convert_to_iter_based=True),
     dict(
-        T_max=48,
+        T_max=24,
         begin=0,
         by_epoch=True,
         convert_to_iter_based=True,
-        end=48,
+        end=24,
         eta_min=0.8947368421052632,
         type='CosineAnnealingMomentum'),
     dict(
-        T_max=72,
-        begin=48,
+        T_max=36,
+        begin=24,
+        convert_to_iter_based=True,
+        end=60,
+        eta_min=1,
+        type='CosineAnnealingMomentum'),
+    dict(
+        T_max=24,
+        begin=60,
+        by_epoch=True,
+        convert_to_iter_based=True,
+        end=84,
+        eta_min=0.8947368421052632,
+        type='CosineAnnealingMomentum'),
+    dict(
+        T_max=36,
+        begin=84,
         convert_to_iter_based=True,
         end=120,
         eta_min=1,
@@ -314,7 +345,7 @@ test_dataloader = dict(
                 'points',
             ], type='Pack3DDetInputs'),
         ],
-        test_mode=True,                                                 ###### ATTENTION: This may be it
+        test_mode=True,
         type='MinervaLidarOnlyDataset'),
     drop_last=False,
     num_workers=1,
@@ -356,7 +387,7 @@ test_pipeline = [
         'points',
     ], type='Pack3DDetInputs'),
 ]
-train_cfg = dict(by_epoch=True, max_epochs=120, val_interval=12)
+train_cfg = dict(by_epoch=True, max_epochs=1, val_interval=12)
 train_dataloader = dict(
     batch_size=2,
     dataset=dict(
@@ -399,11 +430,10 @@ train_dataloader = dict(
                             filter_by_difficulty=[
                                 -1,
                             ],
-                            filter_by_min_points=dict(Car=30)),
+                            filter_by_min_points=dict(Car=15)),
                         rate=1.0,
                         sample_groups=dict(Car=15)),
-                    use_ground_plane=False,                         ###### ATTENTION: This may be it: Riccardo does not have it --> Probably not it, 
-                                                                    #                 since it defaults to "False"
+                    use_ground_plane=False,
                     type='ObjectSample'),
                 dict(
                     global_rot_range=[
@@ -494,11 +524,10 @@ train_pipeline = [
             prepare=dict(
                 filter_by_difficulty=[
                     -1,
-                ], filter_by_min_points=dict(Car=30)),
+                ], filter_by_min_points=dict(Car=15)),
             rate=1.0,
             sample_groups=dict(Car=15)),
-        use_ground_plane=False,                                     ###### ATTENTION: This may be it: Riccardo does not have it --> Probably not it, 
-                                                                    #                 since it defaults to "False"
+        use_ground_plane=False,
         type='ObjectSample'),
     dict(
         global_rot_range=[

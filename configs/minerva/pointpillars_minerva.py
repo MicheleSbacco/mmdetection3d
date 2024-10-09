@@ -15,13 +15,20 @@ _base_ = [
 # How this file works:  - The dataset, training scheduler, and runtime are inherited from files in "_base_/..." 
 #                       - The NN model as a whole is described here
 
-point_cloud_range = [-70, -20, -2, 150, 20, 5]              ## Make sure is the same as reference value in "_base_/datasets/..."
-voxel_size = [0.1, 0.1, 7]
+point_cloud_range = [           ## Make sure is the same as reference value in "_base_/datasets/..."
+    -70, -20, -2, 
+    150, 20, 5
+    ]              
+voxel_size = [
+    0.25, 
+    0.25, 
+    point_cloud_range[5]-point_cloud_range[2]
+    ]
 grid_output_size = [
     int(  (point_cloud_range[3]-point_cloud_range[0])  /  voxel_size[0]),
     int(  (point_cloud_range[4]-point_cloud_range[1])  /  voxel_size[1])
-]
-anchor_range = [-70, -20, -2.5, 150, 20, 2.5]
+    ]
+anchor_range = [-50, -20, 0.0, 100, 20, 0.0]
 
 
 
@@ -77,8 +84,8 @@ model = dict(
                 anchor_range                            ## Just one because it's just one class
             ],
             sizes=[[5., 2., 1.5]],                                      ## Adapted to dimension of car
-            rotations=[0, 1.57],                                         ## Adapted to type of circuit: can be left just
-                                                                                #  one with 0° of rotation 
+            rotations=[0, 1.57],                                            ## Adapted to type of circuit: can be left just
+                                                                            #  one with 0° of rotation 
             reshape_out=False),
         diff_rad_by_sin=True,
         bbox_coder=dict(type='DeltaXYZWLHRBBoxCoder'),
@@ -123,6 +130,6 @@ model = dict(
         # be shown in the results of the inference
         score_thr=5e-7,
         min_bbox_size=0,
-        nms_pre=100,
+        nms_pre=10,
         # Number of "top bboxes" among which the "score_thr" is filtered
         max_num=4))
