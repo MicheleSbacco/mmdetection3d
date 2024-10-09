@@ -113,7 +113,9 @@ class SingleStage3DDetector(Base3DDetector):
         out_file = '/home/michele/iac_code/michele_mmdet3d/data/minerva_polimove/inference_times.json'
         handler = JSONHandler(out_file)
         
-        x = self.extract_feat(batch_inputs_dict)
+        x = self.extract_feat_test(batch_inputs_dict)                           # NOTE: Modified so that there is a difference between training and
+                                                                                #       testing phases
+
         begin = time.time()                                                             # Added for time computation (ONLY PREDICTION, NO TRAINING)
         results_list = self.bbox_head.predict(x, batch_data_samples, **kwargs)
         end = time.time()                                                               # Added for time computation (ONLY PREDICTION, NO TRAINING)
