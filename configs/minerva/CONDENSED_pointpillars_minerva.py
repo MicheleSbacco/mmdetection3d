@@ -38,12 +38,12 @@ default_hooks = dict(
     sampler_seed=dict(type='DistSamplerSeedHook'),
     timer=dict(type='IterTimerHook'),
     visualization=dict(
-        draw=True,
+        draw=False,
         draw_gt=True,
         draw_pred=True,
         interval=4,
         score_thr=0,
-        show=True,
+        show=False,
         type='Det3DVisualizationHook',
         vis_task='lidar_det',
         wait_time=10))
@@ -343,6 +343,8 @@ test_dataloader = dict(
                 type='MultiScaleFlipAug3D'),
             dict(keys=[
                 'points',
+                'gt_bboxes_3d',
+                'gt_labels_3d',
             ], type='Pack3DDetInputs'),
         ],
         test_mode=True,
@@ -354,6 +356,7 @@ test_dataloader = dict(
 test_evaluator = dict(
     ann_file='data/minerva_polimove/minerva_polimove_infos_val.pkl',
     metric='bbox',
+    lidar_path_prefix = '/home/michele/iac_code/michele_mmdet3d/',
     type='MinervaMetric')
 test_pipeline = [
     dict(coord_type='LIDAR', load_dim=4, type='LoadPointsFromFile', use_dim=4),
@@ -387,7 +390,7 @@ test_pipeline = [
         'points',
     ], type='Pack3DDetInputs'),
 ]
-train_cfg = dict(by_epoch=True, max_epochs=1, val_interval=12)
+train_cfg = dict(by_epoch=True, max_epochs=1, val_interval=1)
 train_dataloader = dict(
     batch_size=2,
     dataset=dict(
@@ -605,6 +608,8 @@ val_dataloader = dict(
                 use_dim=4),
             dict(keys=[
                 'points',
+                'gt_bboxes_3d',
+                'gt_labels_3d',
             ], type='Pack3DDetInputs'),
         ],
         test_mode=True,

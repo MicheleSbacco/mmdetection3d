@@ -63,14 +63,15 @@ class Base3DInferencer(BaseInferencer):
                  weights: Optional[str] = None,
                  device: Optional[str] = None,
                  scope: str = 'mmdet3d',
-                 palette: str = 'none') -> None:
+                 palette: str = 'none',
+                 show_progress: bool = False) -> None:                                  # Added parameter to remove visualization of progress
         # A global counter tracking the number of frames processed, for
         # naming of the output results
         self.num_predicted_frames = 0
         self.palette = palette
         init_default_scope(scope)
         super().__init__(
-            model=model, weights=weights, device=device, scope=scope)
+            model=model, weights=weights, device=device, scope=scope, show_progress=show_progress)
         self.model = revert_sync_batchnorm(self.model)
 
     def _convert_syncbn(self, cfg: ConfigType):
@@ -95,7 +96,11 @@ class Base3DInferencer(BaseInferencer):
         device: str = 'cpu',
     ) -> nn.Module:
         self._convert_syncbn(cfg.model)
-        cfg.model.train_cfg = None
+
+        # cfg.model.train_cfg = None                                # Commented line to allow for the creation of the 
+        #                                                           # Anchor3DHead, which in turn is needed to add the 
+        #                                                           # loss to the metrics
+        
         model = MODELS.build(cfg.model)
 
         checkpoint = load_checkpoint(model, weights, map_location='cpu')

@@ -15,7 +15,7 @@
 #       - the function "compute_metrics" must return a dictionary of "key[str]: value[float]" but it is printed in the 
 #         "ugly" way (like the first block below here)
 #       - the function "kitti_evaluate" has been used as a reference for the "beautiful" print, with the specific line 
-#         being "print_log(f'Results of " that can be directly integrated inside "compute_metrics"
+#         being "print_log(f'Results of ...)" that can be directly integrated inside "compute_metrics"
 #
 #  
 # TODO: Remember to check if it is possible to add the "loss" value in loops.py
@@ -52,6 +52,10 @@ from mmdet3d.structures import (Box3DMode, CameraInstance3DBoxes,
 
 # Added import for the computation of the IoU
 from mmdet3d.structures.ops.iou3d_calculator import BboxOverlaps3D
+# Added import for the computation of losses with the Inferencer
+from mmdet3d.apis import LidarDet3DInferencer
+# Added import for the proper type transformation of the gt_bboxes
+from mmengine.structures import InstanceData
 
 
 
@@ -104,7 +108,9 @@ class MinervaMetric(BaseMetric):
                  format_only: bool = False,
                  submission_prefix: Optional[str] = None,
                  collect_device: str = 'cpu',
-                 backend_args: Optional[dict] = None) -> None:
+                 backend_args: Optional[dict] = None,
+                 lidar_path_prefix = '/home/michele/iac_code/michele_mmdet3d/'      # Added argument to initialize the inferencer's input
+                 ) -> None:
         self.default_prefix = 'Minerva'
         super(MinervaMetric, self).__init__(
             collect_device=collect_device, prefix=prefix)
@@ -132,48 +138,19 @@ class MinervaMetric(BaseMetric):
         # Initialize the variable that will contain the bboxes for the evaluation of the AP40
         self.bboxes = []
         # Initialize the iou threshold for the computation of true positives etc. (according to
-        # the iou) TODO: make it settable in the initialization
+        # the iou) TODO: make it settable in the initialization ---> NOTE: Actually more intelligent to always use some different values
         self.iou_threshold = 0.5
-        # Initialize the type of bbox 
+        # Initialize the type of bbox
         self.box_type = 'lidar'
-
-
-
-
-
-
-    # This function:
-    #   - returns a list of dictionaries
-    #   - each dictionary of the list corresponds to a "scan" of the LiDAR
-    #   - each dictionary contains:
-    #       - the sample index (in timestamps)
-    #       - a tensor of dimensions (N, 7) where 7 are the dimentions of the bbox, and 
-    #         N the number of bboxes in the single scan
-    def convert_pkl_to_gt_bboxes(self, pkl_infos):
+        # Initialized the inferencer and the lidar path prefix
+        self.inferencer = LidarDet3DInferencer(model='/home/michele/iac_code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',
+                                               weights='/home/michele/iac_code/michele_mmdet3d/work_dirs/pointpillars_minerva/epoch_120.pth',
+                                               want_losses=True,
+                                               show_progress = False)
+        self.lidar_path_prefix = lidar_path_prefix
         
-        # Create the list that will contain the dictionaries
-        dictionary_list = []
-        
-        # Cycle through the number of scans
-        for scan in pkl_infos['data_list']:
-            # Create the local dictionary, to be appended to the list later on
-            local_dictionary = {
-                'sample_index' : scan['sample_idx']
-            }
-            # Temporary variable where to create the tensor
-            local_tensor = torch.zeros(len(scan['instances']), 7)
-            
-            # Cycle through the bboxes in the same scan
-            for i, instance in enumerate(scan['instances']):
-                # Assign the row of the tensor
-                local_tensor[i] = torch.tensor(instance['bbox_3d'])
-            
-            # Assign the new field to the local dictionary
-            local_dictionary['bboxes'] = local_tensor
-            # Update the list with the new tensor
-            dictionary_list.append(local_dictionary)
-
-        return dictionary_list
+        # TODO: Find a way to just use the most recent version of the model (otherwise the validation refers to the best model you 
+        #       have, rather than the one you really want to validate)
 
 
 
@@ -211,27 +188,31 @@ class MinervaMetric(BaseMetric):
             data_batch (dict): A batch of data from the dataloader.
             data_samples (Sequence[dict]): A batch of outputs from the model.
         """
-        
-        ##################################### OLD PART #####################################
-        for data_sample in data_samples:
-            result = dict()
 
-            # The 3D predictions (bboxes) are saved and transferred to the 'cpu' (from the 'gpu')
-            pred_3d = data_sample['pred_instances_3d']
-            for attr_name in pred_3d:
-                pred_3d[attr_name] = pred_3d[attr_name].to('cpu')
-            result['pred_instances_3d'] = pred_3d
+
+
+        ##################################### OLD PART #####################################
+        # for data_sample in data_samples:
+        #     result = dict()
+
+        #     # The 3D predictions (bboxes) are saved and transferred to the 'cpu' (from the 'gpu')
+        #     pred_3d = data_sample['pred_instances_3d']
+        #     for attr_name in pred_3d:
+        #         pred_3d[attr_name] = pred_3d[attr_name].to('cpu')
+        #     result['pred_instances_3d'] = pred_3d
             
-            # Part below is commented because is not used (we don't do 2D-predictions)
-            # pred_2d = data_sample['pred_instances']
-            # for attr_name in pred_2d:
-            #     pred_2d[attr_name] = pred_2d[attr_name].to('cpu')
-            # result['pred_instances'] = pred_2d
+        #     # Part below is commented because is not used (we don't do 2D-predictions)
+        #     # pred_2d = data_sample['pred_instances']
+        #     # for attr_name in pred_2d:
+        #     #     pred_2d[attr_name] = pred_2d[attr_name].to('cpu')
+        #     # result['pred_instances'] = pred_2d
             
-            sample_idx = data_sample['sample_idx']
-            result['sample_idx'] = sample_idx
+        #     sample_idx = data_sample['sample_idx']
+        #     result['sample_idx'] = sample_idx
             
-            self.results.append(result)
+        #     self.results.append(result)
+
+
 
         ##################################### NEW PART #####################################
         # Just process the first element (not found cases when there are more than just one element)
@@ -253,6 +234,25 @@ class MinervaMetric(BaseMetric):
         #     new_dictionary['gt_bboxes'] = data_sample['eval_ann_info']['gt_bboxes_3d'].tensor
         # else:
         #     new_dictionary['gt_bboxes'] = data_sample['gt_instances_3d']['bboxes_3d'].tensor
+
+
+
+        ##################################### NEW PART FOR LOSSES #####################################
+        # Create an object of type "InstanceData"
+        #   - Needed to match the type of data for the inferencer
+        #   - Contains information about the ground truth bounding boxes (gt_bboxes)
+        #   - Will then be passed to the inferencer as an argument for the call
+        new_InstanceData = InstanceData()
+        new_InstanceData.bboxes_3d = data_sample['eval_ann_info']['gt_bboxes_3d']
+        new_InstanceData.labels_3d = torch.tensor(data_sample['eval_ann_info']['gt_labels_3d'].tolist(), device='cuda:0')
+
+        # Create the right input for the inferencer
+        input = self.lidar_path_prefix + data_sample['lidar_path']
+        input = dict(points=input)
+        
+        # Compute the losses with the inferencer, and add them to the dictionary
+        losses = self.inferencer(input, gt_bboxes=new_InstanceData)
+        new_dictionary['losses'] = losses
 
         # Append the dictionary to the list of dictionaries
         self.bboxes.append(new_dictionary)
@@ -290,6 +290,13 @@ class MinervaMetric(BaseMetric):
         """
         logger: MMLogger = MMLogger.get_current_instance()
 
+        total_loss = []
+        for dict in self.bboxes:
+            total_loss.append(sum(dict['losses']))
+            print(f"{dict['losses']}\n\t{sum(dict['losses'])}")
+        print(f"\nAverage loss is:\t{sum(total_loss)/len(total_loss)}\n")
+        exit()
+
         # ATTENTION:
         #   - The part below here is not used anymore, but the functions have been left
         #   - Everything is now done inside the "self.process()" function
@@ -305,7 +312,7 @@ class MinervaMetric(BaseMetric):
         
         # Cycle through the dictionaries (one for each scan in the dataset)
         for dict in self.bboxes:
-            # The bboxes come already sorted, so there's no need to sort them again
+            # The bboxes come already sorted score-wise, so there's no need to sort them again
             pass
             # Compute the precision and recall for the scan
             precision, recall = self.compute_precision_recall(dict['pred_bboxes'], dict['gt_bboxes'])
