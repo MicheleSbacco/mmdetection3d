@@ -177,12 +177,12 @@ model = dict(
             4,
         ]),
     test_cfg=dict(
-        max_num=6,
+        max_num=10,
         min_bbox_size=0,
         nms_across_levels=False,
         nms_pre=10,
         nms_thr=0.01,
-        score_thr=0,
+        score_thr=0.3,
         use_rotate_nms=True),
     train_cfg=dict(
         allowed_border=0,
@@ -296,7 +296,7 @@ point_cloud_range=[
     28.8,
     5,
 ]
-resume = False
+resume = True
 test_cfg = dict()
 test_dataloader = dict(
     batch_size=1,
@@ -390,7 +390,7 @@ test_pipeline = [
         'points',
     ], type='Pack3DDetInputs'),
 ]
-train_cfg = dict(by_epoch=True, max_epochs=1, val_interval=1)
+train_cfg = dict(by_epoch=True, max_epochs=150, val_interval=1)
 train_dataloader = dict(
     batch_size=2,
     dataset=dict(
@@ -621,6 +621,7 @@ val_dataloader = dict(
 val_evaluator = dict(
     ann_file='data/minerva_polimove/minerva_polimove_infos_val.pkl',
     metric='bbox',
+    lidar_path_prefix = '/home/michele/iac_code/michele_mmdet3d/',
     type='MinervaMetric')
 vis_backends = [
     dict(type='LocalVisBackend'),

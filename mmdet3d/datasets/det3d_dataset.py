@@ -323,7 +323,8 @@ class Det3DDataset(BaseDataset):
             info['ann_info'] = self.parse_ann_info(info)
         if self.test_mode and self.load_eval_anns:
             info['eval_ann_info'] = self.parse_ann_info(info)
-        info['ann_info'] = self.parse_ann_info(info)
+        info['ann_info'] = self.parse_ann_info(info)                ## Added for having gt_bboxes and gt_labels also for the 
+                                                                    #  "test" and "val" dataloaders in the config file
 
         return info
 

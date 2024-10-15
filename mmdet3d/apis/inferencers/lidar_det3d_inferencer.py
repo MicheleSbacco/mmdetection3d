@@ -297,10 +297,15 @@ class LidarDet3DInferencer(Base3DInferencer):
             
             # Added part to handle the computation of losses
             if self.want_losses:
+                # Get the inputs (points) for the feature extraction
                 data1 = self.model.data_preprocessor(data, True)['inputs']
+                # Extract the features from the pointcloud (voxels, voxel_centres, etc..)
                 x = self.model.extract_feat(data1)
+                # Add the gt_bboxes to the "data_samples" dictionary
                 data['data_samples'][0].gt_instances_3d = copy.deepcopy(gt_bboxes)
+                # Compute the losses using the Anchor3dHead
                 losses = self.model.bbox_head.loss(x, data['data_samples'])
+                # Return the losses in the form of a Python list
                 return [float(losses['loss_cls'][0]), float(losses['loss_bbox'][0]), float(losses['loss_dir'][0])]
             
             visualization = self.visualize(ori_inputs, preds,

@@ -16,11 +16,10 @@
 #         "ugly" way (like the first block below here)
 #       - the function "kitti_evaluate" has been used as a reference for the "beautiful" print, with the specific line 
 #         being "print_log(f'Results of ...)" that can be directly integrated inside "compute_metrics"
-#
-#  
-# TODO: Remember to check if it is possible to add the "loss" value in loops.py
+# 
+# 
+# 
 # TODO: See if it is possible to add other metrics apart from the 3d metric 
-# TODO: Actually the AP40 must be computed for different values of the iou_threshold
 
 
 
@@ -94,9 +93,6 @@ class MinervaMetric(BaseMetric):
 
 
 
-
-
-
     # TODO: Sistema questa inizializzazione per togliere tutta la roba inutile
     def __init__(self,
                  ann_file: str,
@@ -135,11 +131,16 @@ class MinervaMetric(BaseMetric):
                 raise KeyError("metric should be one of 'bbox', 'img_bbox', "
                                f'but got {metric}.')
         
+        # Initialize self.results to avoid receiving a warning from the parent class "BaseMetric"
+        self.results = [{}]
         # Initialize the variable that will contain the bboxes for the evaluation of the AP40
         self.bboxes = []
-        # Initialize the iou threshold for the computation of true positives etc. (according to
-        # the iou) TODO: make it settable in the initialization ---> NOTE: Actually more intelligent to always use some different values
-        self.iou_threshold = 0.5
+        # Initialize the IoU thresholds for the computation of true positives, false positives and
+        # false negatives.
+        self.start_iou = 0.40
+        self.end_iou = 0.90
+        self.interval_iou = 0.025
+        self.iou_threshold = np.linspace(self.start_iou, self.end_iou, round((self.end_iou-self.start_iou)/self.interval_iou)+1)
         # Initialize the type of bbox
         self.box_type = 'lidar'
         # Initialized the inferencer and the lidar path prefix
@@ -148,7 +149,7 @@ class MinervaMetric(BaseMetric):
                                                want_losses=True,
                                                show_progress = False)
         self.lidar_path_prefix = lidar_path_prefix
-        
+
         # TODO: Find a way to just use the most recent version of the model (otherwise the validation refers to the best model you 
         #       have, rather than the one you really want to validate)
 
@@ -188,29 +189,6 @@ class MinervaMetric(BaseMetric):
             data_batch (dict): A batch of data from the dataloader.
             data_samples (Sequence[dict]): A batch of outputs from the model.
         """
-
-
-
-        ##################################### OLD PART #####################################
-        # for data_sample in data_samples:
-        #     result = dict()
-
-        #     # The 3D predictions (bboxes) are saved and transferred to the 'cpu' (from the 'gpu')
-        #     pred_3d = data_sample['pred_instances_3d']
-        #     for attr_name in pred_3d:
-        #         pred_3d[attr_name] = pred_3d[attr_name].to('cpu')
-        #     result['pred_instances_3d'] = pred_3d
-            
-        #     # Part below is commented because is not used (we don't do 2D-predictions)
-        #     # pred_2d = data_sample['pred_instances']
-        #     # for attr_name in pred_2d:
-        #     #     pred_2d[attr_name] = pred_2d[attr_name].to('cpu')
-        #     # result['pred_instances'] = pred_2d
-            
-        #     sample_idx = data_sample['sample_idx']
-        #     result['sample_idx'] = sample_idx
-            
-        #     self.results.append(result)
 
 
 
@@ -290,50 +268,59 @@ class MinervaMetric(BaseMetric):
         """
         logger: MMLogger = MMLogger.get_current_instance()
 
-        total_loss = []
-        for dict in self.bboxes:
-            total_loss.append(sum(dict['losses']))
-            print(f"{dict['losses']}\n\t{sum(dict['losses'])}")
-        print(f"\nAverage loss is:\t{sum(total_loss)/len(total_loss)}\n")
-        exit()
-
-        # ATTENTION:
-        #   - The part below here is not used anymore, but the functions have been left
-        #   - Everything is now done inside the "self.process()" function
-
-        # # Download the ground truth information from the ".pkl" file
-        # pkl_infos = load(self.ann_file, backend_args=self.backend_args)
-        # # Elaborate the data in order to save a list of dictionaries
-        # self.gt_bboxes = self.convert_pkl_to_gt_bboxes(pkl_infos)
-    
         # Create empty lists for precision and recall
         precisions = []
         recalls = []
         
-        # Cycle through the dictionaries (one for each scan in the dataset)
-        for dict in self.bboxes:
-            # The bboxes come already sorted score-wise, so there's no need to sort them again
-            pass
-            # Compute the precision and recall for the scan
-            precision, recall = self.compute_precision_recall(dict['pred_bboxes'], dict['gt_bboxes'])
+        # Compute the precision and recall for the scan.
+        # Do it for each value inside the list "self.iou_threshold" to have more data
+        for iou_value in self.iou_threshold:
+            precision, recall = self.compute_precision_recall(iou_value)
             precisions.append(precision)
             recalls.append(recall)
 
-        # Aggregate all precision-recall curves into a single one
+        # Aggregate all precision-recall values into a single curve
         precisions = np.array(sorted(precisions, reverse=True))
         recalls = np.array(sorted(recalls))
 
         # Compute AP40
         ap40 = self.compute_ap40(precisions, recalls)
-        
+
+        # Gather all the losses by type in a single list
+        # Number:   0               1       2
+        # Type:     Classification  B-box   Direction
+        total_losses = [[], [], []]
+        for dict in self.bboxes:
+            total_losses[0].append(dict['losses'][0])
+            total_losses[1].append(dict['losses'][1])
+            total_losses[2].append(dict['losses'][2])
+        # Now compute the average losses
+        loss_cls = np.sum(total_losses[0])/len(total_losses[0])
+        loss_bbox = np.sum(total_losses[1])/len(total_losses[1])
+        loss_dir = np.sum(total_losses[2])/len(total_losses[2])
+        loss_general = loss_cls+loss_bbox+loss_dir
+
         # Prepare the "cool print"
-        pre_print = "\n\n---------------------------------------------------------\nResults for validation:\n\n" + \
+        pre_print = "\n\n---------------------------------------------------------\nResults for validation:\n\n" \
                     "\t(Method)\t(Metric)\t(Threshold)\t(Value)\n"
         post_print = "\n---------------------------------------------------------\n"
-        print_log(f'{pre_print}\tAP40\t\t3D metric\t@ IoU=0.5:\t{ap40}{post_print}', logger=logger)
+        print_log(f"{pre_print}"\
+            f"\tAP40\t\t3D metric\t[{self.start_iou:.2f} : {self.end_iou:.2f}]\t{ap40:.4f}\n"\
+            f"\tLoss\t\tClassification\t   /\t\t{loss_cls:.4f}\n"\
+            f"\tLoss\t\tB-box\t\t   /\t\t{loss_bbox:.4f}\n"\
+            f"\tLoss\t\tDirection\t   /\t\t{loss_dir:.4f}\n"\
+            f"\tLoss\t\tTotal\t\t   /\t\t{loss_general:.4f}"\
+            f"{post_print}", logger=logger)
 
+        # Reset the parameter self.bboxes for next validation cycle
+        self.bboxes = []
+        
         # Return the dictionary with "metric: value" for the "ugly" print
-        return {'AP40(3d metric)': ap40}
+        return {'AP40 (3d metric)': ap40,
+                'Loss_cls':         loss_cls,
+                'Loss_bbox':        loss_bbox,
+                'Loss_dir':         loss_dir,
+                'Loss_general':     loss_general}
 
 
 
@@ -341,49 +328,57 @@ class MinervaMetric(BaseMetric):
 
 
     # This function, adapted from ChatGPT, is used to compute the precision and recall of the single LiDAR scan
-    # TODO: understand what it does
-    def compute_precision_recall(self, pred_bboxes, gt_bboxes):
+    def compute_precision_recall(self, iou_threshold):
         # Initialize the instance of BboxOverlaps3D to compute the IoU
         iou_computer = BboxOverlaps3D(self.box_type)
 
-        # Initialize the number of true positives and false positives
+        # Initialize the number of true positives, false positives, false negatives
         tp = 0
         fp = 0
-        # Create a set (NO repetition!!) that tracks the indeces of matched ground truths
-        matched_gts = set()
+        fn = 0
+        
+        # Cycle through the dictionaries --> A.K.A. through the scans in the dataset)
+        for dict in self.bboxes:
+            # Create a set (NO repetition!!) that tracks the indeces of matched ground truths
+            # It has to be initialized for EACH scan!!
+            matched_gts = set()
+            
+            # Create a pointer to the right fields of the dictionary
+            pred_bboxes = dict['pred_bboxes']
+            gt_bboxes = dict['gt_bboxes']
 
-        # Many steps:
-        #       - cycle through the predictions
-        #       - then through the ground truths, to find the best match for the prediction
-        #       - when (and if) best match has been found:
-        #           - update the tp if over the iou_threshold and not already matched
-        #           - otherwise update the fp
-        for i in range(pred_bboxes.size(0)):
-            # Initialize values
-            best_iou = 0
-            best_gt_idx = -1
-            # Internal for loop
-            for j in range(gt_bboxes.size(0)):
-                # Create the two tensors in such a way that BboxOverlaps3D likes it
-                tensor1 = torch.Tensor(1, 7)
-                tensor1[0] = pred_bboxes[i]
-                tensor2 = torch.Tensor(1, 7)
-                tensor2[0] = gt_bboxes[j]
-                # Compute the IoU
-                iou = iou_computer(tensor1, tensor2)
-                # Check if the match has to be updated
-                if iou > best_iou:
-                    best_iou = iou
-                    best_gt_idx = j
-            # Update tp or fp
-            if best_iou >= self.iou_threshold and best_gt_idx not in matched_gts:
-                tp += 1
-                matched_gts.add(best_gt_idx)
-            else:
-                fp += 1
+            # Many steps:
+            #       - cycle through the predictions
+            #       - then through the ground truths, to find the best match for the prediction
+            #       - when (and if) best match has been found:
+            #           - update the tp if over the iou_threshold and not already matched
+            #           - otherwise update the fp
+            for i in range(pred_bboxes.size(0)):
+                # Initialize values
+                best_iou = 0
+                best_gt_idx = -1
+                # Internal for loop
+                for j in range(gt_bboxes.size(0)):
+                    # Create the two tensors in such a way that BboxOverlaps3D likes it
+                    tensor1 = torch.Tensor(1, 7)
+                    tensor1[0] = pred_bboxes[i]
+                    tensor2 = torch.Tensor(1, 7)
+                    tensor2[0] = gt_bboxes[j]
+                    # Compute the IoU
+                    iou = iou_computer(tensor1, tensor2)
+                    # Check if the match has to be updated
+                    if iou > best_iou:
+                        best_iou = iou
+                        best_gt_idx = j
+                # Update tp or fp
+                if best_iou >= iou_threshold and best_gt_idx not in matched_gts:
+                    tp += 1
+                    matched_gts.add(best_gt_idx)
+                else:
+                    fp += 1
 
-        # False negatives are ground truths that were not matched
-        fn = gt_bboxes.size(0) - len(matched_gts)
+            # False negatives are ground truths that were not matched
+            fn += (gt_bboxes.size(0) - len(matched_gts))
 
         # Calculate precision and recall, and return them
         precision = tp / (tp + fp + 1e-15)
@@ -398,7 +393,8 @@ class MinervaMetric(BaseMetric):
     # This function computes the ap40, depending on the precisions and recalls
     def compute_ap40(self, precisions, recalls):
         
-        recall_levels = np.linspace(0, 1, 40)
+        recall_levels = np.linspace(0, 1, 41)           # If I want 40 vertical strips, I need to 
+                                                        # set 41 "points"
         ap40 = 0.0
 
         for recall_level in recall_levels:
