@@ -105,7 +105,18 @@ class MinervaMetric(BaseMetric):
                  submission_prefix: Optional[str] = None,
                  collect_device: str = 'cpu',
                  backend_args: Optional[dict] = None,
-                 lidar_path_prefix = '/home/michele/iac_code/michele_mmdet3d/'      # Added argument to initialize the inferencer's input
+                 lidar_path_prefix = '/home/michele/iac_code/michele_mmdet3d/',     # Added argument to initialize the inferencer's input
+                 model_path =                                                       # Added argument to the desired model config 
+                 '/home/michele/iac_code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',
+                 last_chkpt_file_path =                                             # Added argument for the checkpoint update
+                 '/home/michele/iac_code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint'
+                            #####################################################
+                            ##                                                 ##
+                            ##  Just for clarity: the "val_evaluator" config   ##
+                            ##  is used for the validation cycle (so NOT the   ##
+                            ##  "test_evaluator" config.                       ##
+                            ##                                                 ##
+                            #####################################################
                  ) -> None:
         self.default_prefix = 'Minerva'
         super(MinervaMetric, self).__init__(
@@ -143,15 +154,12 @@ class MinervaMetric(BaseMetric):
         self.iou_threshold = np.linspace(self.start_iou, self.end_iou, round((self.end_iou-self.start_iou)/self.interval_iou)+1)
         # Initialize the type of bbox
         self.box_type = 'lidar'
-        # Initialized the inferencer and the lidar path prefix
-        self.inferencer = LidarDet3DInferencer(model='/home/michele/iac_code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',
-                                               weights='/home/michele/iac_code/michele_mmdet3d/work_dirs/pointpillars_minerva/epoch_120.pth',
-                                               want_losses=True,
-                                               show_progress = False)
+        # Boolean that will be used to initialize the inferencer at each validation cycle, and other parameters for the inferencer
+        self.inferencer_needs_update = True
+        self.inferencer = None
         self.lidar_path_prefix = lidar_path_prefix
-
-        # TODO: Find a way to just use the most recent version of the model (otherwise the validation refers to the best model you 
-        #       have, rather than the one you really want to validate)
+        self.model_path = model_path
+        self.last_chkpt_file_path = last_chkpt_file_path
 
 
 
@@ -189,6 +197,22 @@ class MinervaMetric(BaseMetric):
             data_batch (dict): A batch of data from the dataloader.
             data_samples (Sequence[dict]): A batch of outputs from the model.
         """
+
+
+
+        ############################### INITIALIZE INFERENCER ###############################
+        if self.inferencer_needs_update:
+            # Read the path to the most recent weights
+            with open(self.last_chkpt_file_path, 'r') as file:
+                weights_path = file.readline().strip()
+            # Initialize the inferencer
+            self.inferencer = LidarDet3DInferencer(model=self.model_path,
+                                                   weights=weights_path,
+                                                   want_losses=True,
+                                                   show_progress = False
+                                                   )
+            # Set the boolean back to false
+            self.inferencer_needs_update = False
 
 
 
@@ -314,6 +338,8 @@ class MinervaMetric(BaseMetric):
 
         # Reset the parameter self.bboxes for next validation cycle
         self.bboxes = []
+        # Reset the boolean for the initialization of the inferencer
+        self.inferencer_needs_update = True
         
         # Return the dictionary with "metric: value" for the "ugly" print
         return {'AP40 (3d metric)': ap40,

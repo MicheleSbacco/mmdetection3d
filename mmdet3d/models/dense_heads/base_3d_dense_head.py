@@ -80,7 +80,12 @@ class Base3DDenseHead(BaseModule, metaclass=ABCMeta):
         Returns:
             dict: A dictionary of loss components.
         """
-        outs = self(x)
+        outs = self(x)      # What does it call? It calls:
+                            #   - Anchor3DHead.forward() which in turn returns a multy_apply of ...
+                            #   - ... of Anchor3DHead.forward_single()
+                            #
+                            # CONLCUSION: This method is too complex for loss computation, better to
+                            #             just use the checkpoints
 
         batch_gt_instances_3d = []
         batch_gt_instances_ignore = []
