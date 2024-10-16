@@ -1,0 +1,2 @@
+{"lr": 7.141144492452661e-06, "data_time": 0.09058705354348207, "grad_norm": 5.331547370323768, "loss": 2.329883868877704, "loss_cls": 0.8967133836868482, "loss_bbox": 1.4157106158060906, "loss_dir": 0.017459880196465515, "time": 0.4346788724263509, "epoch": 1, "iter": 39, "memory": 4007, "step": 39}
+{"Kitti metric/porcoddio": 10.0, "Kitti metric/e la madonna": 0.5, "Kitti metric/quella puttana": 0.0, "Kitti metric/maledetta": 1.8, "data_time": 0.0025793790817260744, "time": 0.049701499938964847, "step": 1}
