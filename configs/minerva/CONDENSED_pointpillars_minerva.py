@@ -38,15 +38,15 @@ default_hooks = dict(
     sampler_seed=dict(type='DistSamplerSeedHook'),
     timer=dict(type='IterTimerHook'),
     visualization=dict(
-        draw=False,
+        draw=True,
         draw_gt=True,
         draw_pred=True,
-        interval=4,
+        interval=1,
         score_thr=0,
-        show=False,
+        show=True,
         type='Det3DVisualizationHook',
         vis_task='lidar_det',
-        wait_time=10))
+        wait_time=30))
 default_scope = 'mmdet3d'
 env_cfg = dict(
     cudnn_benchmark=False,
@@ -296,7 +296,7 @@ point_cloud_range=[
     28.8,
     5,
 ]
-resume = False
+resume = True
 test_cfg = dict()
 test_dataloader = dict(
     batch_size=1,
@@ -356,9 +356,9 @@ test_dataloader = dict(
 test_evaluator = dict(
     ann_file='data/minerva_polimove/minerva_polimove_infos_val.pkl',
     metric='bbox',
-    lidar_path_prefix = '/home/michele/iac_code/michele_mmdet3d/',      # Needs update!!!
-    model_path = '/home/michele/iac_code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',    # Needs update!!!
-    last_chkpt_file_path = '/home/michele/iac_code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint', # Needs update!!!
+    lidar_path_prefix = '/home/michele/ode/michele_mmdet3d/',   # Needs update!!!
+    model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',    # Needs update!!!
+    last_chkpt_file_path = '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint', # Needs update!!!
     type='MinervaMetric')
 test_pipeline = [
     dict(coord_type='LIDAR', load_dim=4, type='LoadPointsFromFile', use_dim=4),
@@ -623,9 +623,9 @@ val_dataloader = dict(
 val_evaluator = dict(
     ann_file='data/minerva_polimove/minerva_polimove_infos_val.pkl',
     metric='bbox',
-    lidar_path_prefix = '/home/michele/iac_code/michele_mmdet3d/',      # Needs update!!!
-    model_path = '/home/michele/iac_code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',    # Needs update!!!
-    last_chkpt_file_path = '/home/michele/iac_code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint', # Needs update!!!
+    lidar_path_prefix = '/home/michele/code/michele_mmdet3d/',  # Needs update!!!
+    model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',    # Needs update!!!
+    last_chkpt_file_path = '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint', # Needs update!!!
     type='MinervaMetric')
 vis_backends = [
     dict(type='LocalVisBackend'),
