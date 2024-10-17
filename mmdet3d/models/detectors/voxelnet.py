@@ -46,7 +46,7 @@ class VoxelNet(SingleStage3DDetector):
         """Extract features from points."""
         
         # Added lines to initialize the handler, for time computation
-        out_file = '/home/michele/iac_code/michele_mmdet3d/data/minerva_polimove/inference_times.json'
+        out_file = '/home/michele/code/michele_mmdet3d/data/minerva_polimove/inference_times.json'
         handler = JSONHandler(out_file)
         
         voxel_dict = batch_inputs_dict['voxels']

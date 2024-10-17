@@ -110,7 +110,7 @@ class SingleStage3DDetector(Base3DDetector):
                     (num_instances, C) where C >=7.
         """
         # Added lines to initialize the handler, for time computation
-        out_file = '/home/michele/iac_code/michele_mmdet3d/data/minerva_polimove/inference_times.json'
+        out_file = '/home/michele/code/michele_mmdet3d/data/minerva_polimove/inference_times.json'
         handler = JSONHandler(out_file)
         
         x = self.extract_feat_test(batch_inputs_dict)                           # NOTE: Modified so that there is a difference between training and

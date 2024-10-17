@@ -105,11 +105,11 @@ class MinervaMetric(BaseMetric):
                  submission_prefix: Optional[str] = None,
                  collect_device: str = 'cpu',
                  backend_args: Optional[dict] = None,
-                 lidar_path_prefix = '/home/michele/iac_code/michele_mmdet3d/',     # Added argument to initialize the inferencer's input
-                 model_path =                                                       # Added argument to the desired model config 
-                 '/home/michele/iac_code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',
-                 last_chkpt_file_path =                                             # Added argument for the checkpoint update
-                 '/home/michele/iac_code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint'
+                 lidar_path_prefix = '/home/michele/code/michele_mmdet3d/',     # Added argument to initialize the inferencer's input
+                 model_path =                                                   # Added argument to the desired model config 
+                 '/home/michele/code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',
+                 last_chkpt_file_path =                                         # Added argument for the checkpoint update
+                 '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint'
                             #####################################################
                             ##                                                 ##
                             ##  Just for clarity: the "val_evaluator" config   ##
