@@ -12,6 +12,7 @@ from .base import Base3DDetector
 # Added import for the computation of time
 import time
 from demo.json_handler import JSONHandler
+import torch
 
 @MODELS.register_module()
 class SingleStage3DDetector(Base3DDetector):
@@ -116,8 +117,10 @@ class SingleStage3DDetector(Base3DDetector):
         x = self.extract_feat_test(batch_inputs_dict)                           # NOTE: Modified so that there is a difference between training and
                                                                                 #       testing phases
 
+        torch.cuda.synchronize()
         begin = time.time()                                                             # Added for time computation (ONLY PREDICTION, NO TRAINING)
         results_list = self.bbox_head.predict(x, batch_data_samples, **kwargs)
+        torch.cuda.synchronize()
         end = time.time()                                                               # Added for time computation (ONLY PREDICTION, NO TRAINING)
         predictions = self.add_pred_to_datasample(batch_data_samples,
                                                   results_list)

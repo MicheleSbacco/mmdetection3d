@@ -10,6 +10,7 @@ from .single_stage import SingleStage3DDetector
 # Added import for the computation of time
 from demo.json_handler import JSONHandler
 import time
+import torch
 
 @MODELS.register_module()
 class VoxelNet(SingleStage3DDetector):
@@ -50,22 +51,30 @@ class VoxelNet(SingleStage3DDetector):
         handler = JSONHandler(out_file)
         
         voxel_dict = batch_inputs_dict['voxels']
+        torch.cuda.synchronize()
         vox_enc0 = time.time()                                              # Added for time computation
         voxel_features = self.voxel_encoder(voxel_dict['voxels'],
                                             voxel_dict['num_points'],
                                             voxel_dict['coors'])
+        torch.cuda.synchronize()
         vox_enc1 = time.time()                                              # Added for time computation
         batch_size = voxel_dict['coors'][-1, 0].item() + 1
+        torch.cuda.synchronize()
         mid_enc0 = time.time()                                              # Added for time computation
         x = self.middle_encoder(voxel_features, voxel_dict['coors'],
                                 batch_size)
+        torch.cuda.synchronize()
         mid_enc1 = time.time()                                              # Added for time computation
+        torch.cuda.synchronize()
         back_bone0 = time.time()                                            # Added for time computation
         x = self.backbone(x)
+        torch.cuda.synchronize()
         back_bone1 = time.time()                                            # Added for time computation
         if self.with_neck:
+            torch.cuda.synchronize()
             neck0 = time.time()                                             # Added for time computation
             x = self.neck(x)
+            torch.cuda.synchronize()
             neck1 = time.time()                                             # Added for time computation
         
         # Added lines to handle the json file
