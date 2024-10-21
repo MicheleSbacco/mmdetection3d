@@ -398,12 +398,12 @@ class MinervaMetric(BaseMetric):
             pred_bboxes = dict['pred_bboxes']
             gt_bboxes = dict['gt_bboxes']
 
-            # Move the threshold values to the same device as pred_bboxes and gt_bboxes (otherwise get error)
-            device = pred_bboxes.device
-            lower_limit = torch.tensor(self.reduced_x_limit[0], device=device)
-            upper_limit = torch.tensor(self.reduced_x_limit[1], device=device)
-            # Filter the bboxes with the x_value if required
             if self.reduced_x_limit is not None:
+                # Move the threshold values to the same device as pred_bboxes and gt_bboxes (otherwise get error)
+                device = pred_bboxes.device
+                lower_limit = torch.tensor(self.reduced_x_limit[0], device=device)
+                upper_limit = torch.tensor(self.reduced_x_limit[1], device=device)
+                # Filter the bboxes with the x_value if required
                 pred_bboxes = pred_bboxes[(pred_bboxes[:, 0] >= lower_limit) & (pred_bboxes[:, 0] <= upper_limit)]
                 gt_bboxes = gt_bboxes[(gt_bboxes[:, 0] >= self.reduced_x_limit[0]) & (gt_bboxes[:, 0] <= self.reduced_x_limit[1])]
 
