@@ -25,7 +25,10 @@ class VoxelNet(SingleStage3DDetector):
                  train_cfg: OptConfigType = None,
                  test_cfg: OptConfigType = None,
                  data_preprocessor: OptConfigType = None,
-                 init_cfg: OptMultiConfig = None) -> None:
+                 init_cfg: OptMultiConfig = None,
+                 save_losses_on_file = True,            # Added parameter to save losses on a .json file
+                 losses_file_destination_path = None    # Added parameter to save losses on a .json file
+                 ) -> None:
         super().__init__(
             backbone=backbone,
             neck=neck,
@@ -33,7 +36,9 @@ class VoxelNet(SingleStage3DDetector):
             train_cfg=train_cfg,
             test_cfg=test_cfg,
             data_preprocessor=data_preprocessor,
-            init_cfg=init_cfg)
+            init_cfg=init_cfg,
+            save_losses_on_file=save_losses_on_file,
+            losses_file_destination_path=losses_file_destination_path)
         self.voxel_encoder = MODELS.build(voxel_encoder)
         self.middle_encoder = MODELS.build(middle_encoder)
 

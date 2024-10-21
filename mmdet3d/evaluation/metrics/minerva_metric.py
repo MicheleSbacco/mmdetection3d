@@ -55,6 +55,9 @@ from mmdet3d.structures.ops.iou3d_calculator import BboxOverlaps3D
 from mmdet3d.apis import LidarDet3DInferencer
 # Added import for the proper type transformation of the gt_bboxes
 from mmengine.structures import InstanceData
+# Added import (and boolean) for the tracing of losses
+from demo.json_handler import JSONHandler
+save_losses = True
 
 
 
@@ -109,7 +112,11 @@ class MinervaMetric(BaseMetric):
                  model_path =                                                   # Added argument to the desired model config 
                  '/home/michele/code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',
                  last_chkpt_file_path =                                         # Added argument for the checkpoint update
-                 '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint'
+                 '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint',
+                 save_losses_on_file = False,                                   # Added argument to save the losses on a .json file
+                 losses_file_destination_path = None,                           # Added argument to save the losses on a .json file
+                 reduced_x_limit = None                                         # To count less false negatives (when gt_bbox is too far)
+
                             #####################################################
                             ##                                                 ##
                             ##  Just for clarity: the "val_evaluator" config   ##
@@ -117,6 +124,7 @@ class MinervaMetric(BaseMetric):
                             ##  "test_evaluator" config.                       ##
                             ##                                                 ##
                             #####################################################
+                 
                  ) -> None:
         self.default_prefix = 'Minerva'
         super(MinervaMetric, self).__init__(
@@ -160,6 +168,16 @@ class MinervaMetric(BaseMetric):
         self.lidar_path_prefix = lidar_path_prefix
         self.model_path = model_path
         self.last_chkpt_file_path = last_chkpt_file_path
+        # Added initialization to save losses on a .json file
+        if save_losses_on_file:
+            if losses_file_destination_path == None:
+                print("\n\n###########################################\
+                      \n#    Losses destination file is None!!    #\
+                      \n###########################################\n\n")
+                exit()
+            self.handler = JSONHandler(losses_file_destination_path)
+        # Added parameter for the reduction in the count of false negatives
+        self.reduced_x_limit = reduced_x_limit
 
 
 
@@ -324,6 +342,13 @@ class MinervaMetric(BaseMetric):
         loss_dir = np.sum(total_losses[2])/len(total_losses[2])
         loss_general = loss_cls+loss_bbox+loss_dir
 
+        # If want to save losses, add a dictionary with the right losses
+        self.handler.add_dictionary(
+            {'type': "validation",
+             'total_loss': loss_general,
+             'ap40': ap40}
+        )
+
         # Prepare the "cool print"
         pre_print = "\n\n---------------------------------------------------------\nResults for validation:\n\n" \
                     "\t(Method)\t(Metric)\t(Threshold)\t(Value)\n"
@@ -372,6 +397,15 @@ class MinervaMetric(BaseMetric):
             # Create a pointer to the right fields of the dictionary
             pred_bboxes = dict['pred_bboxes']
             gt_bboxes = dict['gt_bboxes']
+
+            # Move the threshold values to the same device as pred_bboxes and gt_bboxes (otherwise get error)
+            device = pred_bboxes.device
+            lower_limit = torch.tensor(self.reduced_x_limit[0], device=device)
+            upper_limit = torch.tensor(self.reduced_x_limit[1], device=device)
+            # Filter the bboxes with the x_value if required
+            if self.reduced_x_limit is not None:
+                pred_bboxes = pred_bboxes[(pred_bboxes[:, 0] >= lower_limit) & (pred_bboxes[:, 0] <= upper_limit)]
+                gt_bboxes = gt_bboxes[(gt_bboxes[:, 0] >= self.reduced_x_limit[0]) & (gt_bboxes[:, 0] <= self.reduced_x_limit[1])]
 
             # Many steps:
             #       - cycle through the predictions

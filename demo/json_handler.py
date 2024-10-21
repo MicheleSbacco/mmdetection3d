@@ -11,6 +11,8 @@ class JSONHandler:
         """
         self.file_path = file_path
         self.wanna_print = wanna_print
+        if not os.path.exists(self.file_path):
+            self.reset()
 
 
 

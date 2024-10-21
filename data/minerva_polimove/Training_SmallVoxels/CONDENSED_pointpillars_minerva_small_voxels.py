@@ -1,11 +1,3 @@
-anchor_range = [
-    -90,
-    -28.8,
-    -1,
-    166,
-    28.8,
-    -1,
-]
 auto_scale_lr = dict(base_batch_size=50, enable=False)
 class_names = [
     'Car',
@@ -32,13 +24,13 @@ db_sampler = dict(
     rate=1.0,
     sample_groups=dict(Car=15))
 default_hooks = dict(
-    checkpoint=dict(interval=5, type='CheckpointHook'), # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
+    checkpoint=dict(interval=5, type='CheckpointHook'),
     logger=dict(interval=50, type='LoggerHook'),
     param_scheduler=dict(type='ParamSchedulerHook'),
     sampler_seed=dict(type='DistSamplerSeedHook'),
     timer=dict(type='IterTimerHook'),
     visualization=dict(
-        draw=True,
+        draw=False,
         draw_gt=True,
         draw_pred=True,
         interval=1,
@@ -142,22 +134,24 @@ model = dict(
                 40000,
             ),
             point_cloud_range=[
-                -90,
-                -28.8,
+                -85,
+                -30,
                 -2,
-                166,
-                28.8,
+                155,
+                30,
                 5,
             ],
             voxel_size=[
-                0.16,
-                0.16,
+                0.1,
+                0.1,
                 7,
             ])),
+    losses_file_destination_path=
+    '/home/michele/code/michele_mmdet3d/demo/losses_log.json',
     middle_encoder=dict(
         in_channels=64, output_shape=[
-            400,
-            1600,
+            600,
+            2400,
         ], type='PointPillarsScatter'),
     neck=dict(
         in_channels=[
@@ -176,6 +170,7 @@ model = dict(
             2,
             4,
         ]),
+    save_losses_on_file=True,
     test_cfg=dict(
         max_num=10,
         min_bbox_size=0,
@@ -195,9 +190,6 @@ model = dict(
             type='Max3DIoUAssigner'),
         debug=False,
         pos_weight=-1),
-    # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
-    save_losses_on_file = False,
-    losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json", 
     type='VoxelNet',
     voxel_encoder=dict(
         feat_channels=[
@@ -205,17 +197,17 @@ model = dict(
         ],
         in_channels=4,
         point_cloud_range=[
-            -90,
-            -28.8,
+            -85,
+            -30,
             -2,
-            166,
-            28.8,
+            155,
+            30,
             5,
         ],
         type='PillarFeatureNet',
         voxel_size=[
-            0.16,
-            0.16,
+            0.1,
+            0.1,
             7,
         ],
         with_distance=False))
@@ -229,37 +221,37 @@ optim_wrapper = dict(
     type='OptimWrapper')
 param_scheduler = [
     dict(
-        type='CosineAnnealingLR',
         T_max=24,
-        eta_min=0.01,
         begin=0,
+        by_epoch=True,
+        convert_to_iter_based=True,
         end=24,
-        by_epoch=True,
-        convert_to_iter_based=True),
-    dict(
-        type='CosineAnnealingLR',
-        T_max=36,
-        eta_min=1.0000000000000001e-07,
-        begin=24,
-        end=60,
-        by_epoch=True,
-        convert_to_iter_based=True),
-    dict(
-        type='CosineAnnealingLR',
-        T_max=24,
         eta_min=0.01,
-        begin=60,
-        end=84,
-        by_epoch=True,
-        convert_to_iter_based=True),
+        type='CosineAnnealingLR'),
     dict(
-        type='CosineAnnealingLR',
         T_max=36,
-        eta_min=1.0000000000000001e-07,
-        begin=84,
-        end=120,
+        begin=24,
         by_epoch=True,
-        convert_to_iter_based=True),
+        convert_to_iter_based=True,
+        end=60,
+        eta_min=1.0000000000000001e-07,
+        type='CosineAnnealingLR'),
+    dict(
+        T_max=24,
+        begin=60,
+        by_epoch=True,
+        convert_to_iter_based=True,
+        end=84,
+        eta_min=0.01,
+        type='CosineAnnealingLR'),
+    dict(
+        T_max=36,
+        begin=84,
+        by_epoch=True,
+        convert_to_iter_based=True,
+        end=120,
+        eta_min=1.0000000000000001e-07,
+        type='CosineAnnealingLR'),
     dict(
         T_max=24,
         begin=0,
@@ -291,15 +283,15 @@ param_scheduler = [
         eta_min=1,
         type='CosineAnnealingMomentum'),
 ]
-point_cloud_range=[
-    -90,
-    -28.8,
+point_cloud_range = [
+    -85,
+    -30,
     -2,
-    166,
-    28.8,
+    155,
+    30,
     5,
 ]
-resume = True
+resume = False
 test_cfg = dict()
 test_dataloader = dict(
     batch_size=1,
@@ -344,11 +336,13 @@ test_dataloader = dict(
                     dict(type='RandomFlip3D'),
                 ],
                 type='MultiScaleFlipAug3D'),
-            dict(keys=[
-                'points',
-                'gt_bboxes_3d',
-                'gt_labels_3d',
-            ], type='Pack3DDetInputs'),
+            dict(
+                keys=[
+                    'points',
+                    'gt_bboxes_3d',
+                    'gt_labels_3d',
+                ],
+                type='Pack3DDetInputs'),
         ],
         test_mode=True,
         type='MinervaLidarOnlyDataset'),
@@ -358,14 +352,15 @@ test_dataloader = dict(
     sampler=dict(shuffle=False, type='DefaultSampler'))
 test_evaluator = dict(
     ann_file='data/minerva_polimove/minerva_polimove_infos_val.pkl',
+    last_chkpt_file_path=
+    '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint',
+    lidar_path_prefix='/home/michele/ode/michele_mmdet3d/',
+    losses_file_destination_path=
+    '/home/michele/code/michele_mmdet3d/demo/losses_log.json',
     metric='bbox',
-    lidar_path_prefix = '/home/michele/ode/michele_mmdet3d/',   # Needs update!!!
-    model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',    # Needs update!!!
-    last_chkpt_file_path = '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint', # Needs update!!!
-    # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
-    save_losses_on_file = False,
-    losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json",
-    reduced_x_limit = None,
+    model_path=
+    '/home/michele/code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',
+    save_losses_on_file=True,
     type='MinervaMetric')
 test_pipeline = [
     dict(coord_type='LIDAR', load_dim=4, type='LoadPointsFromFile', use_dim=4),
@@ -401,7 +396,7 @@ test_pipeline = [
 ]
 train_cfg = dict(by_epoch=True, max_epochs=150, val_interval=5)
 train_dataloader = dict(
-    batch_size=2,
+    batch_size=1,
     dataset=dict(
         dataset=dict(
             ann_file='minerva_polimove_infos_train.pkl',
@@ -445,8 +440,8 @@ train_dataloader = dict(
                             filter_by_min_points=dict(Car=15)),
                         rate=1.0,
                         sample_groups=dict(Car=15)),
-                    use_ground_plane=False,
-                    type='ObjectSample'),
+                    type='ObjectSample',
+                    use_ground_plane=False),
                 dict(
                     global_rot_range=[
                         0.0,
@@ -476,21 +471,21 @@ train_dataloader = dict(
                     type='GlobalRotScaleTrans'),
                 dict(
                     point_cloud_range=[
-                        -90,
-                        -28.8,
+                        -85,
+                        -30,
                         -2,
-                        166,
-                        28.8,
+                        155,
+                        30,
                         5,
                     ],
                     type='PointsRangeFilter'),
                 dict(
                     point_cloud_range=[
-                        -90,
-                        -28.8,
+                        -85,
+                        -30,
                         -2,
-                        166,
-                        28.8,
+                        155,
+                        30,
                         5,
                     ],
                     type='ObjectRangeFilter'),
@@ -539,8 +534,8 @@ train_pipeline = [
                 ], filter_by_min_points=dict(Car=15)),
             rate=1.0,
             sample_groups=dict(Car=15)),
-        use_ground_plane=False,
-        type='ObjectSample'),
+        type='ObjectSample',
+        use_ground_plane=False),
     dict(
         global_rot_range=[
             0.0,
@@ -570,21 +565,21 @@ train_pipeline = [
         type='GlobalRotScaleTrans'),
     dict(
         point_cloud_range=[
-            -90,
-            -28.8,
+            -85,
+            -30,
             -2,
-            166,
-            28.8,
+            155,
+            30,
             5,
         ],
         type='PointsRangeFilter'),
     dict(
         point_cloud_range=[
-            -90,
-            -28.8,
+            -85,
+            -30,
             -2,
-            166,
-            28.8,
+            155,
+            30,
             5,
         ],
         type='ObjectRangeFilter'),
@@ -615,11 +610,13 @@ val_dataloader = dict(
                 load_dim=4,
                 type='LoadPointsFromFile',
                 use_dim=4),
-            dict(keys=[
-                'points',
-                'gt_bboxes_3d',
-                'gt_labels_3d',
-            ], type='Pack3DDetInputs'),
+            dict(
+                keys=[
+                    'points',
+                    'gt_bboxes_3d',
+                    'gt_labels_3d',
+                ],
+                type='Pack3DDetInputs'),
         ],
         test_mode=True,
         type='MinervaLidarOnlyDataset'),
@@ -629,14 +626,15 @@ val_dataloader = dict(
     sampler=dict(shuffle=False, type='DefaultSampler'))
 val_evaluator = dict(
     ann_file='data/minerva_polimove/minerva_polimove_infos_val.pkl',
+    last_chkpt_file_path=
+    '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint',
+    lidar_path_prefix='/home/michele/code/michele_mmdet3d/',
+    losses_file_destination_path=
+    '/home/michele/code/michele_mmdet3d/demo/losses_log.json',
     metric='bbox',
-    lidar_path_prefix = '/home/michele/code/michele_mmdet3d/',  # Needs update!!!
-    model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',    # Needs update!!!
-    last_chkpt_file_path = '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint', # Needs update!!!
-    # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
-    save_losses_on_file = False,
-    losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json",
-    reduced_x_limit = None,
+    model_path=
+    '/home/michele/code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',
+    save_losses_on_file=True,
     type='MinervaMetric')
 vis_backends = [
     dict(type='LocalVisBackend'),
@@ -648,8 +646,8 @@ visualizer = dict(
         dict(type='LocalVisBackend'),
     ])
 voxel_size = [
-    0.16,
-    0.16,
+    0.1,
+    0.1,
     7,
 ]
 work_dir = './work_dirs/pointpillars_minerva'

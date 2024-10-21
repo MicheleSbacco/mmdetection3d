@@ -9,7 +9,7 @@ from mmdet3d.utils import ConfigType, OptConfigType, OptMultiConfig
 from ...structures.det3d_data_sample import OptSampleList, SampleList
 from .base import Base3DDetector
 
-# Added import for the computation of time
+# Added import for the computation of time (and also losses)
 import time
 from demo.json_handler import JSONHandler
 import torch
@@ -45,7 +45,10 @@ class SingleStage3DDetector(Base3DDetector):
                  train_cfg: OptConfigType = None,
                  test_cfg: OptConfigType = None,
                  data_preprocessor: OptConfigType = None,
-                 init_cfg: OptMultiConfig = None) -> None:
+                 init_cfg: OptMultiConfig = None,
+                 save_losses_on_file = True,            # Added parameter to save losses on a .json file
+                 losses_file_destination_path = None    # Added parameter to save losses on a .json file
+                 ) -> None:
         super().__init__(
             data_preprocessor=data_preprocessor, init_cfg=init_cfg)
         self.backbone = MODELS.build(backbone)
@@ -56,6 +59,14 @@ class SingleStage3DDetector(Base3DDetector):
         self.bbox_head = MODELS.build(bbox_head)
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
+        # Added initialization to save losses on a .json file
+        if save_losses_on_file:
+            if losses_file_destination_path == None:
+                print("\n\n###########################################\
+                      \n#    Losses destination file is None!!    #\
+                      \n###########################################\n\n")
+                exit()
+            self.handler = JSONHandler(losses_file_destination_path)
 
     def loss(self, batch_inputs_dict: dict, batch_data_samples: SampleList,
              **kwargs) -> Union[dict, list]:
@@ -77,6 +88,13 @@ class SingleStage3DDetector(Base3DDetector):
         """
         x = self.extract_feat(batch_inputs_dict)
         losses = self.bbox_head.loss(x, batch_data_samples, **kwargs)
+
+        # Added lines to save the losses on file
+        self.handler.add_dictionary(
+            {'type': "training",
+            'total_loss': float(losses['loss_cls'][0]) + float(losses['loss_bbox'][0]) + float(losses['loss_dir'][0])}
+        )
+
         return losses
 
     def predict(self, batch_inputs_dict: dict, batch_data_samples: SampleList,
