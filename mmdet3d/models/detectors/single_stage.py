@@ -60,7 +60,8 @@ class SingleStage3DDetector(Base3DDetector):
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
         # Added initialization to save losses on a .json file
-        if save_losses_on_file:
+        self.save_losses_on_file = save_losses_on_file
+        if self.save_losses_on_file:
             if losses_file_destination_path == None:
                 print("\n\n###########################################\
                       \n#    Losses destination file is None!!    #\
@@ -90,10 +91,11 @@ class SingleStage3DDetector(Base3DDetector):
         losses = self.bbox_head.loss(x, batch_data_samples, **kwargs)
 
         # Added lines to save the losses on file
-        self.handler.add_dictionary(
-            {'type': "training",
-            'total_loss': float(losses['loss_cls'][0]) + float(losses['loss_bbox'][0]) + float(losses['loss_dir'][0])}
-        )
+        if self.save_losses_on_file:
+            self.handler.add_dictionary(
+                {'type': "training",
+                'total_loss': float(losses['loss_cls'][0]) + float(losses['loss_bbox'][0]) + float(losses['loss_dir'][0])}
+            )
 
         return losses
 

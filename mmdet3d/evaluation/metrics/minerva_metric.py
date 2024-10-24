@@ -57,7 +57,6 @@ from mmdet3d.apis import LidarDet3DInferencer
 from mmengine.structures import InstanceData
 # Added import (and boolean) for the tracing of losses
 from demo.json_handler import JSONHandler
-save_losses = True
 
 
 
@@ -169,7 +168,8 @@ class MinervaMetric(BaseMetric):
         self.model_path = model_path
         self.last_chkpt_file_path = last_chkpt_file_path
         # Added initialization to save losses on a .json file
-        if save_losses_on_file:
+        self.save_losses_on_file = save_losses_on_file
+        if self.save_losses_on_file:
             if losses_file_destination_path == None:
                 print("\n\n###########################################\
                       \n#    Losses destination file is None!!    #\
@@ -343,11 +343,12 @@ class MinervaMetric(BaseMetric):
         loss_general = loss_cls+loss_bbox+loss_dir
 
         # If want to save losses, add a dictionary with the right losses
-        self.handler.add_dictionary(
-            {'type': "validation",
-             'total_loss': loss_general,
-             'ap40': ap40}
-        )
+        if self.save_losses_on_file:
+            self.handler.add_dictionary(
+                {'type': "validation",
+                'total_loss': loss_general,
+                'ap40': ap40}
+            )
 
         # Prepare the "cool print"
         pre_print = "\n\n---------------------------------------------------------\nResults for validation:\n\n" \
