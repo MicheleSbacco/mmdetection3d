@@ -25,10 +25,10 @@ class JSONHandler:
             os.remove(self.file_path)
             if self.wanna_print: print(f"File '{self.file_path}' has been deleted.")
         
-        # Create a new empty JSON file with an empty list
-        with open(self.file_path, 'w') as file:
-            json.dump([], file, indent=4)
-        if self.wanna_print: print(f"New empty JSON file created at '{self.file_path}'.")
+        # # Create a new empty JSON file with an empty list
+        # with open(self.file_path, 'w') as file:
+        #     json.dump([], file, indent=4)
+        # if self.wanna_print: print(f"New empty JSON file created at '{self.file_path}'.")
 
 
 
