@@ -17,7 +17,7 @@ def freq_plot(values, title = "Frequency Plot"):
     plt.grid(True)
     plt.show()
 
-def freq_plot_with_gaussian(values, title="Frequency Plot with Gaussian", columns_color="blue"):
+def freq_plot_with_gaussian(values, title="Frequency Plot with Gaussian", columns_color="blue", n_bins = 80):
     # Set everything to [ms] instead of [s]
     values = [v*1000 for v in values]
 
@@ -28,7 +28,7 @@ def freq_plot_with_gaussian(values, title="Frequency Plot with Gaussian", column
 
     # Plotting the frequency plot with a vertical red line for the average value
     plt.figure(figsize=(10, 5))
-    n_bins = 20
+    n_bins = n_bins
     plt.hist(values, bins=n_bins, alpha=0.7, color=columns_color, edgecolor='black', density=False)
     plt.axvline(average_value, color='red', linestyle='--', linewidth=3, label=f'$\mu={average_value:.2f}$ ms')
 
@@ -54,6 +54,9 @@ def plot_pie_chart(values_1, values_2, values_3):
     explosion = [.05, .05, .05]
 
     plt.figure(figsize=(8, 8))
-    plt.pie(sizes, explode=explosion, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90, textprops={'fontsize': 13})
+    plt.pie(sizes, explode=explosion, labels=labels, colors=colors, autopct='%1.1f%%', 
+            startangle=90, 
+            textprops={'fontsize': 20},
+            wedgeprops={'edgecolor': 'black', 'linewidth': 0.75})
     plt.axis('equal')
     plt.show()
