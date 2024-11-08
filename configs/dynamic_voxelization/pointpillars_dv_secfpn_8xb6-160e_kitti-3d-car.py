@@ -19,3 +19,5 @@ model = dict(
         with_distance=False,
         voxel_size=voxel_size,
         point_cloud_range=point_cloud_range))
+
+# Reference file to configure the Dynamic VoxelNet

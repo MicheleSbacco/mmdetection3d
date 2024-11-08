@@ -32,21 +32,21 @@ db_sampler = dict(
     rate=1.0,
     sample_groups=dict(Car=15))
 default_hooks = dict(
-    checkpoint=dict(interval=5, type='CheckpointHook'), # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
+    checkpoint=dict(interval=1, type='CheckpointHook'), # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
     logger=dict(interval=50, type='LoggerHook'),
     param_scheduler=dict(type='ParamSchedulerHook'),
     sampler_seed=dict(type='DistSamplerSeedHook'),
     timer=dict(type='IterTimerHook'),
     visualization=dict(
-        draw=True,
+        draw=False,
         draw_gt=True,
         draw_pred=True,
-        interval=1,
+        interval=15,
         score_thr=0,
         show=True,
         type='Det3DVisualizationHook',
         vis_task='lidar_det',
-        wait_time=30))
+        wait_time=7.5))
 default_scope = 'mmdet3d'
 env_cfg = dict(
     cudnn_benchmark=False,
@@ -196,7 +196,7 @@ model = dict(
         debug=False,
         pos_weight=-1),
     # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
-    save_losses_on_file = False,
+    save_losses_on_file = True,
     losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json", 
     type='VoxelNet',
     voxel_encoder=dict(
@@ -363,9 +363,9 @@ test_evaluator = dict(
     model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',    # Needs update!!!
     last_chkpt_file_path = '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint', # Needs update!!!
     # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
-    save_losses_on_file = False,
+    save_losses_on_file = True,
     losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json",
-    reduced_x_limit = None,
+    reduced_x_limit = [-40, 80],
     type='MinervaMetric')
 test_pipeline = [
     dict(coord_type='LIDAR', load_dim=4, type='LoadPointsFromFile', use_dim=4),
@@ -399,7 +399,7 @@ test_pipeline = [
         'points',
     ], type='Pack3DDetInputs'),
 ]
-train_cfg = dict(by_epoch=True, max_epochs=150, val_interval=5)
+train_cfg = dict(by_epoch=True, max_epochs=60, val_interval=1)
 train_dataloader = dict(
     batch_size=2,
     dataset=dict(
@@ -634,9 +634,9 @@ val_evaluator = dict(
     model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',    # Needs update!!!
     last_chkpt_file_path = '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint', # Needs update!!!
     # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
-    save_losses_on_file = False,
+    save_losses_on_file = True,
     losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json",
-    reduced_x_limit = None,
+    reduced_x_limit = [-40, 80],
     type='MinervaMetric')
 vis_backends = [
     dict(type='LocalVisBackend'),

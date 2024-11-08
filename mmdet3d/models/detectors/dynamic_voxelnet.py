@@ -23,7 +23,10 @@ class DynamicVoxelNet(VoxelNet):
                  train_cfg: OptConfigType = None,
                  test_cfg: OptConfigType = None,
                  data_preprocessor: OptConfigType = None,
-                 init_cfg: OptMultiConfig = None) -> None:
+                 init_cfg: OptMultiConfig = None,
+                 save_losses_on_file = True,            # Related to VoxelNet (1)
+                 losses_file_destination_path = None    # Related to VoxelNet (2)
+                 ) -> None:
         super().__init__(
             voxel_encoder=voxel_encoder,
             middle_encoder=middle_encoder,
@@ -33,7 +36,9 @@ class DynamicVoxelNet(VoxelNet):
             train_cfg=train_cfg,
             test_cfg=test_cfg,
             data_preprocessor=data_preprocessor,
-            init_cfg=init_cfg)
+            init_cfg=init_cfg,
+            save_losses_on_file=save_losses_on_file,                        # Related to VoxelNet (1)
+            losses_file_destination_path=losses_file_destination_path)      # Related to VoxelNet (2)
 
     def extract_feat(self, batch_inputs_dict: dict) -> Tuple[Tensor]:
         """Extract features from points."""
