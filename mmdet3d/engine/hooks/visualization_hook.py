@@ -151,8 +151,11 @@ class Det3DVisualizationHook(Hook):
         
         # New added part to visualize the "ground truth" bboxes
         new_InstanceData = InstanceData()
-        new_InstanceData.bboxes_3d = outputs[0].eval_ann_info['gt_bboxes_3d']
-        new_InstanceData.labels_3d = outputs[0].eval_ann_info['gt_bboxes_labels']
+        dict_keys = list(outputs[0].eval_ann_info.keys())
+        # Added "if statement" in case the labels are empty (there are no gt_bboxes)
+        if ("gt_bboxes_3d" in dict_keys) and ("gt_bboxes_labels" in dict_keys):
+            new_InstanceData.bboxes_3d = outputs[0].eval_ann_info['gt_bboxes_3d']
+            new_InstanceData.labels_3d = outputs[0].eval_ann_info['gt_bboxes_labels']
         outputs[0].gt_instances_3d = new_InstanceData
 
         if total_curr_iter % self.interval == 0:

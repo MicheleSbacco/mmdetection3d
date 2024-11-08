@@ -114,7 +114,7 @@ class MinervaMetric(BaseMetric):
                  '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint',
                  save_losses_on_file = False,                                   # Added argument to save the losses on a .json file
                  losses_file_destination_path = None,                           # Added argument to save the losses on a .json file
-                 reduced_x_limit = None                                         # To count less false negatives (when gt_bbox is too far)
+                 reduced_x_limit = [-40, 80]                                    # To count less false negatives (when gt_bbox is too far)
 
                             #####################################################
                             ##                                                 ##
@@ -155,10 +155,10 @@ class MinervaMetric(BaseMetric):
         self.bboxes = []
         # Initialize the IoU thresholds for the computation of true positives, false positives and
         # false negatives.
-        self.start_iou = 0.40
-        self.end_iou = 0.90
+        self.start_iou = 0.15
+        self.end_iou = 0.85
         self.interval_iou = 0.025
-        self.iou_threshold = np.linspace(self.start_iou, self.end_iou, round((self.end_iou-self.start_iou)/self.interval_iou)+1)
+        self.iou_threshold_list = np.linspace(self.start_iou, self.end_iou, round((self.end_iou-self.start_iou)/self.interval_iou)+1)
         # Initialize the type of bbox
         self.box_type = 'lidar'
         # Boolean that will be used to initialize the inferencer at each validation cycle, and other parameters for the inferencer
@@ -310,27 +310,51 @@ class MinervaMetric(BaseMetric):
         """
         logger: MMLogger = MMLogger.get_current_instance()
 
+
+
+        ############################################# NORMAL AP40 #############################################
+
         # Create empty lists for precision and recall
         precisions = []
         recalls = []
-        
         # Compute the precision and recall for the scan.
-        # Do it for each value inside the list "self.iou_threshold" to have more data
-        for iou_value in self.iou_threshold:
+        # Do it for each value inside the list "self.iou_threshold_list" to have more data
+        for iou_value in self.iou_threshold_list:
             precision, recall = self.compute_precision_recall(iou_value)
             precisions.append(precision)
             recalls.append(recall)
-
         # Aggregate all precision-recall values into a single curve
         precisions = np.array(sorted(precisions, reverse=True))
         recalls = np.array(sorted(recalls))
-
         # Compute AP40
         ap40 = self.compute_ap40(precisions, recalls)
 
+
+
+        ############################################# REDUCED AP40 #############################################
+
+        # Create empty lists for precision and recall
+        precisions_reduced = []
+        recalls_reduced = []
+        # Compute the precision and recall for the scan.
+        # Do it for each value inside the list "self.iou_threshold_list" to have more data
+        for iou_value in self.iou_threshold_list:
+            precision, recall = self.compute_precision_recall(iou_value, self.reduced_x_limit)
+            precisions_reduced.append(precision)
+            recalls_reduced.append(recall)
+        # Aggregate all precision-recall values into a single curve
+        precisions_reduced = np.array(sorted(precisions_reduced, reverse=True))
+        recalls_reduced = np.array(sorted(recalls_reduced))
+        # Compute AP40
+        ap40_reduced = self.compute_ap40(precisions_reduced, recalls_reduced)
+
+
+
+        ############################################# LOSSES #############################################
+
         # Gather all the losses by type in a single list
-        # Number:   0               1       2
-        # Type:     Classification  B-box   Direction
+        #   Num:    0               1       2
+        #   Type:   Classification  B-box   Direction
         total_losses = [[], [], []]
         for dict in self.bboxes:
             total_losses[0].append(dict['losses'][0])
@@ -342,23 +366,43 @@ class MinervaMetric(BaseMetric):
         loss_dir = np.sum(total_losses[2])/len(total_losses[2])
         loss_general = loss_cls+loss_bbox+loss_dir
 
+
+
+        ############################################# SAVE DICTIONARY #############################################
+        
         # If want to save losses, add a dictionary with the right losses
         if self.save_losses_on_file:
+            # Standard dictionary
             self.handler.add_dictionary(
                 {'type': "validation",
+                'cls_loss': loss_cls,
+                'bbox_loss': loss_bbox,
+                'dir_loss': loss_dir,
                 'total_loss': loss_general,
-                'ap40': ap40}
+                'ap40': ap40,
+                'ap40_iou_thr_list': self.iou_threshold_list.tolist(),
+                'precisions_list': precisions.tolist(),
+                'recalls_list': recalls.tolist(),
+                'ap40_reduced': ap40_reduced,
+                'precisions_list_reduced': precisions_reduced.tolist(),
+                'recalls_list_reduced': recalls_reduced.tolist()}
             )
 
+
+
+        ############################################# PRINT #############################################
+
         # Prepare the "cool print"
-        pre_print = "\n\n---------------------------------------------------------\nResults for validation:\n\n" \
+        pre_print = "\n\n---------------------------------------------------------------------------------------------------\n"\
+                    "Results for the validation dataset:\n\n" \
                     "\t(Method)\t(Metric)\t(Threshold)\t(Value)\n"
-        post_print = "\n---------------------------------------------------------\n"
+        post_print = "\n----------------------------------------------------------------------------\n"
         print_log(f"{pre_print}"\
             f"\tAP40\t\t3D metric\t[{self.start_iou:.2f} : {self.end_iou:.2f}]\t{ap40:.4f}\n"\
-            f"\tLoss\t\tClassification\t   /\t\t{loss_cls:.4f}\n"\
-            f"\tLoss\t\tB-box\t\t   /\t\t{loss_bbox:.4f}\n"\
-            f"\tLoss\t\tDirection\t   /\t\t{loss_dir:.4f}\n"\
+            f"\tAP40_reduced\t3D metric\t (same)\t\t{ap40_reduced:.4f}\t   reduction: [{self.reduced_x_limit[0]};{self.reduced_x_limit[1]}]\n"
+            f"\tLoss_cls\t\t\t   /\t\t{loss_cls:.4f}\n"\
+            f"\tLoss_bbox\t\t\t   /\t\t{loss_bbox:.4f}\n"\
+            f"\tLoss_dir\t\t\t   /\t\t{loss_dir:.4f}\n"\
             f"\tLoss\t\tTotal\t\t   /\t\t{loss_general:.4f}"\
             f"{post_print}", logger=logger)
 
@@ -380,7 +424,7 @@ class MinervaMetric(BaseMetric):
 
 
     # This function, adapted from ChatGPT, is used to compute the precision and recall of the single LiDAR scan
-    def compute_precision_recall(self, iou_threshold):
+    def compute_precision_recall(self, iou_threshold_list, x_limit=None):
         # Initialize the instance of BboxOverlaps3D to compute the IoU
         iou_computer = BboxOverlaps3D(self.box_type)
 
@@ -399,20 +443,20 @@ class MinervaMetric(BaseMetric):
             pred_bboxes = dict['pred_bboxes']
             gt_bboxes = dict['gt_bboxes']
 
-            if self.reduced_x_limit is not None:
+            if x_limit is not None:
                 # Move the threshold values to the same device as pred_bboxes and gt_bboxes (otherwise get error)
                 device = pred_bboxes.device
-                lower_limit = torch.tensor(self.reduced_x_limit[0], device=device)
-                upper_limit = torch.tensor(self.reduced_x_limit[1], device=device)
+                lower_limit = torch.tensor(x_limit[0], device=device)
+                upper_limit = torch.tensor(x_limit[1], device=device)
                 # Filter the bboxes with the x_value if required
                 pred_bboxes = pred_bboxes[(pred_bboxes[:, 0] >= lower_limit) & (pred_bboxes[:, 0] <= upper_limit)]
-                gt_bboxes = gt_bboxes[(gt_bboxes[:, 0] >= self.reduced_x_limit[0]) & (gt_bboxes[:, 0] <= self.reduced_x_limit[1])]
+                gt_bboxes = gt_bboxes[(gt_bboxes[:, 0] >= x_limit[0]) & (gt_bboxes[:, 0] <= x_limit[1])]
 
             # Many steps:
             #       - cycle through the predictions
             #       - then through the ground truths, to find the best match for the prediction
             #       - when (and if) best match has been found:
-            #           - update the tp if over the iou_threshold and not already matched
+            #           - update the tp if over the iou_threshold_list and not already matched
             #           - otherwise update the fp
             for i in range(pred_bboxes.size(0)):
                 # Initialize values
@@ -432,7 +476,7 @@ class MinervaMetric(BaseMetric):
                         best_iou = iou
                         best_gt_idx = j
                 # Update tp or fp
-                if best_iou >= iou_threshold and best_gt_idx not in matched_gts:
+                if best_iou >= iou_threshold_list and best_gt_idx not in matched_gts:
                     tp += 1
                     matched_gts.add(best_gt_idx)
                 else:
