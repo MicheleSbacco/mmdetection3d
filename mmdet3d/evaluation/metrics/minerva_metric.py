@@ -55,8 +55,10 @@ from mmdet3d.structures.ops.iou3d_calculator import BboxOverlaps3D
 from mmdet3d.apis import LidarDet3DInferencer
 # Added import for the proper type transformation of the gt_bboxes
 from mmengine.structures import InstanceData
-# Added import (and boolean) for the tracing of losses
+# Added import for the tracing of losses
 from demo.json_handler import JSONHandler
+# Added import for the "grouping" of training dictionaries
+from demo.utils import group_training_dictionaries
 
 
 
@@ -155,8 +157,8 @@ class MinervaMetric(BaseMetric):
         self.bboxes = []
         # Initialize the IoU thresholds for the computation of true positives, false positives and
         # false negatives.
-        self.start_iou = 0.15
-        self.end_iou = 0.85
+        self.start_iou = 0.10
+        self.end_iou = 0.90
         self.interval_iou = 0.025
         self.iou_threshold_list = np.linspace(self.start_iou, self.end_iou, round((self.end_iou-self.start_iou)/self.interval_iou)+1)
         # Initialize the type of bbox
@@ -372,6 +374,10 @@ class MinervaMetric(BaseMetric):
         
         # If want to save losses, add a dictionary with the right losses
         if self.save_losses_on_file:
+            # Group the last training dictionary
+            original_dict_list = self.handler.read_json_file()
+            updated_dict_list = group_training_dictionaries(original_dict_list)
+            self.handler.subscribe_all(updated_dict_list)
             # Standard dictionary
             self.handler.add_dictionary(
                 {'type': "validation",

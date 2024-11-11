@@ -1,6 +1,8 @@
 import json
 import os
 
+
+
 class JSONHandler:
 
 
@@ -16,7 +18,21 @@ class JSONHandler:
 
 
 
-    def reset(self):
+    def subscribe_all(self, new_complete_list: list):
+        '''
+        Delete the whole file, and substitute it with the passed argument
+        '''
+        # Ensure the passed argument is of type list
+        assert isinstance(new_complete_list, list), "Argument 'new_complete_list' must be of type list"
+        # Reset the file, but re-create it
+        self.reset(re_create=True)
+        # Add all the elements the the new file
+        for element in new_complete_list:
+            self.add_dictionary(element)
+
+
+
+    def reset(self, re_create = False):
         """
         Delete the file if it exists, and create a new empty JSON file with an empty list.
         """
@@ -25,10 +41,11 @@ class JSONHandler:
             os.remove(self.file_path)
             if self.wanna_print: print(f"File '{self.file_path}' has been deleted.")
         
-        # # Create a new empty JSON file with an empty list
-        # with open(self.file_path, 'w') as file:
-        #     json.dump([], file, indent=4)
-        # if self.wanna_print: print(f"New empty JSON file created at '{self.file_path}'.")
+        if re_create:
+            # Create a new empty JSON file with an empty list
+            with open(self.file_path, 'w') as file:
+                json.dump([], file, indent=4)
+            if self.wanna_print: print(f"New empty JSON file created at '{self.file_path}'.")
 
 
 

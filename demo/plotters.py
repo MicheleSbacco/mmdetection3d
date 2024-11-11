@@ -95,11 +95,11 @@ def plot_losses_metrics(epochs, training_losses, validation_losses, metric_ap40,
 
     # Add annotations for each point (training)
     for i, loss in enumerate(training_losses):
-        plt.annotate(f'{loss:.2f}', (epochs[i], training_losses[i]), textcoords="offset points", xytext=(-15,-15), ha='center', fontsize=fontsize_annotations, color='blue')
+        plt.annotate(f'{loss:.2f}', (epochs[i], training_losses[i]), textcoords="offset points", xytext=(-8,-5), ha='center', fontsize=fontsize_annotations, color='blue')
 
     # Add annotations for each point (validation)
     for i, loss in enumerate(validation_losses):
-        plt.annotate(f'{loss:.2f}', (epochs[i], validation_losses[i]), textcoords="offset points", xytext=(-15, 8), ha='center', fontsize=fontsize_annotations, color='red')
+        plt.annotate(f'{loss:.2f}', (epochs[i], validation_losses[i]), textcoords="offset points", xytext=(-8, 5), ha='center', fontsize=fontsize_annotations, color='red')
 
     # Add annotations for each point (ap40 metric)
     for i, ap40 in enumerate(metric_ap40):
@@ -116,7 +116,7 @@ def plot_losses_metrics(epochs, training_losses, validation_losses, metric_ap40,
             plt.annotate(f'', (epochs[i], metric_ap40[i]))
 
     # Show the legend
-    plt.legend(fontsize = 14)
+    plt.legend(fontsize = fontsize_titles-2)
 
     # Display the plot
     plt.show()
@@ -133,7 +133,7 @@ def plot_precision_recall_curve(epoch, precisions, recalls, precisions_reduced, 
     for i, thr in enumerate(iou_thr_list):
         # AP40_reduced
         if i == 0 or (recalls_reduced[i] != recalls_reduced[i-1]) or (precisions_reduced[i] != precisions_reduced[i-1]):
-            plt.annotate(f'@{thr:.3f}', (recalls_reduced[i], precisions_reduced[i]), textcoords="offset points", xytext=(15,7), ha='center', fontsize=10, color='blue')
+            plt.annotate(f'{(100*thr):.1f}', (recalls_reduced[i], precisions_reduced[i]), textcoords="offset points", xytext=(12,5), ha='center', fontsize=10, color='blue')
 
     # Set x and y axis limits dynamically
     max_recall = max(max(recalls), max(recalls_reduced))
