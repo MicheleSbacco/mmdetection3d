@@ -32,7 +32,7 @@ db_sampler = dict(
     rate=1.0,
     sample_groups=dict(Car=15))
 default_hooks = dict(
-    checkpoint=dict(interval=5, type='CheckpointHook'), # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
+    checkpoint=dict(interval=1, type='CheckpointHook'), # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
     logger=dict(interval=50, type='LoggerHook'),
     param_scheduler=dict(type='ParamSchedulerHook'),
     sampler_seed=dict(type='DistSamplerSeedHook'),
@@ -197,7 +197,7 @@ model = dict(
         debug=False,
         pos_weight=-1),
     # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
-    save_losses_on_file = False,
+    save_losses_on_file = True,
     losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json", 
     type='DynamicVoxelNet',
     # ADD PAREMETER: dynamic_voxelization 
@@ -251,7 +251,7 @@ param_scheduler = [
     dict(
         type='CosineAnnealingLR',
         T_max=24,
-        eta_min=0.01,
+        eta_min=1.0000000000000001e-10,
         begin=60,
         end=84,
         by_epoch=True,
@@ -259,7 +259,7 @@ param_scheduler = [
     dict(
         type='CosineAnnealingLR',
         T_max=36,
-        eta_min=1.0000000000000001e-07,
+        eta_min=1.0000000000000001e-13,
         begin=84,
         end=120,
         by_epoch=True,
@@ -285,7 +285,7 @@ param_scheduler = [
         by_epoch=True,
         convert_to_iter_based=True,
         end=84,
-        eta_min=0.8947368421052632,
+        eta_min=1,
         type='CosineAnnealingMomentum'),
     dict(
         T_max=36,
@@ -303,7 +303,7 @@ point_cloud_range=[
     28.8,
     5,
 ]
-resume = False
+resume = True
 test_cfg = dict()
 test_dataloader = dict(
     batch_size=1,
@@ -364,12 +364,12 @@ test_evaluator = dict(
     ann_file='data/minerva_polimove/minerva_polimove_infos_val.pkl',
     metric='bbox',
     lidar_path_prefix = '/home/michele/ode/michele_mmdet3d/',   # Needs update!!!
-    model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',    # Needs update!!!
+    model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/CONDENSED-DYNAMIC_pointpillars_minerva.py',    # Needs update!!!
     last_chkpt_file_path = '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint', # Needs update!!!
     # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
-    save_losses_on_file = False,
+    save_losses_on_file = True,
     losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json",
-    reduced_x_limit = None,
+    reduced_x_limit = [-40, 80],
     type='MinervaMetric')
 test_pipeline = [
     dict(coord_type='LIDAR', load_dim=4, type='LoadPointsFromFile', use_dim=4),
@@ -403,7 +403,7 @@ test_pipeline = [
         'points',
     ], type='Pack3DDetInputs'),
 ]
-train_cfg = dict(by_epoch=True, max_epochs=150, val_interval=1)
+train_cfg = dict(by_epoch=True, max_epochs=120, val_interval=1)
 train_dataloader = dict(
     batch_size=1,
     dataset=dict(
@@ -635,12 +635,12 @@ val_evaluator = dict(
     ann_file='data/minerva_polimove/minerva_polimove_infos_val.pkl',
     metric='bbox',
     lidar_path_prefix = '/home/michele/code/michele_mmdet3d/',  # Needs update!!!
-    model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',    # Needs update!!!
+    model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/CONDENSED-DYNAMIC_pointpillars_minerva.py',    # Needs update!!!
     last_chkpt_file_path = '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint', # Needs update!!!
     # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
-    save_losses_on_file = False,
+    save_losses_on_file = True,
     losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json",
-    reduced_x_limit = None,
+    reduced_x_limit = [-40, 80],
     type='MinervaMetric')
 vis_backends = [
     dict(type='LocalVisBackend'),
