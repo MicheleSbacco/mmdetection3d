@@ -360,7 +360,7 @@ test_evaluator = dict(
     ann_file='data/minerva_polimove/minerva_polimove_infos_val.pkl',
     metric='bbox',
     lidar_path_prefix = '/home/michele/ode/michele_mmdet3d/',   # Needs update!!!
-    model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',    # Needs update!!!
+    model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/CONDENSED-HARD_pointpillars_minerva.py',    # Needs update!!!
     last_chkpt_file_path = '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint', # Needs update!!!
     # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
     save_losses_on_file = True,
@@ -399,7 +399,7 @@ test_pipeline = [
         'points',
     ], type='Pack3DDetInputs'),
 ]
-train_cfg = dict(by_epoch=True, max_epochs=60, val_interval=1)
+train_cfg = dict(by_epoch=True, max_epochs=80, val_interval=1)
 train_dataloader = dict(
     batch_size=2,
     dataset=dict(
@@ -631,7 +631,7 @@ val_evaluator = dict(
     ann_file='data/minerva_polimove/minerva_polimove_infos_val.pkl',
     metric='bbox',
     lidar_path_prefix = '/home/michele/code/michele_mmdet3d/',  # Needs update!!!
-    model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',    # Needs update!!!
+    model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/CONDENSED-HARD_pointpillars_minerva.py',    # Needs update!!!
     last_chkpt_file_path = '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint', # Needs update!!!
     # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
     save_losses_on_file = True,
