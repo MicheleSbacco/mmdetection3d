@@ -287,12 +287,24 @@ class DynamicPillarFeatureNet(PillarFeatureNet):
         Returns:
             torch.Tensor: Features of pillars.
         """
+
+
+        turn_into_cpu = False
+
+
         features_ls = [features]
         # Find distance of x, y, and z from cluster center
         if self._with_cluster_center:
             voxel_mean, mean_coors = self.cluster_scatter(features, coors)
             points_mean = self.map_voxel_center_to_point(
                 coors, voxel_mean, mean_coors)
+            
+            
+            if str(features.device) == 'cpu':
+                turn_into_cpu = True
+                points_mean = points_mean.to('cpu')
+            
+            
             # TODO: maybe also do cluster for reflectivity
             f_cluster = features[:, :3] - points_mean[:, :3]
             features_ls.append(f_cluster)
@@ -323,4 +335,11 @@ class DynamicPillarFeatureNet(PillarFeatureNet):
                     coors, voxel_feats, voxel_coors)
                 features = torch.cat([point_feats, feat_per_point], dim=1)
 
+        
+        
+        if turn_into_cpu:
+            voxel_feats = voxel_feats.to('cpu')
+            voxel_coors = voxel_coors.to('cpu')
+        
+        
         return voxel_feats, voxel_coors
