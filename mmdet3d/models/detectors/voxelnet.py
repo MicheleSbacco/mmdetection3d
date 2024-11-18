@@ -58,30 +58,6 @@ class VoxelNet(SingleStage3DDetector):
         voxel_dict = batch_inputs_dict['voxels']
         torch.cuda.synchronize()
         vox_enc0 = time.time()                                              # Added for time computation
-        
-        
-        
-
-
-
-        print("\n\nEntered in Test")
-        
-        sum = 0
-        for i in range(voxel_dict['num_points'].shape[0]):
-            sum += voxel_dict['num_points'][i]
-        
-        handler1 = JSONHandler("/home/michele/code/lets_try.json")
-        dictionary = {
-            "Num_pillars": int(voxel_dict['voxels'].shape[0]),
-            "Num_actual_points": int(sum)
-        }
-        handler1.add_dictionary(dictionary)
-        
-
-
-        
-        
-        
         voxel_features = self.voxel_encoder(voxel_dict['voxels'],
                                             voxel_dict['num_points'],
                                             voxel_dict['coors'])
