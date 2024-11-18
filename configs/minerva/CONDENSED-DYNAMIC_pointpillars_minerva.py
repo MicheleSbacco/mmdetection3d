@@ -136,6 +136,7 @@ model = dict(
         type='Det3DDataPreprocessor',   # This actually MUST be different: -1's are fundamental
         voxel=True,
         voxel_layer=dict(
+            deterministic = True,   # Dynamic Voxelization is NOT affected by this parameter (also tested)
             max_num_points=-1,
             max_voxels=(
                 -1,

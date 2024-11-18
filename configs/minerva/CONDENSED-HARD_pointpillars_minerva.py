@@ -136,10 +136,10 @@ model = dict(
         type='Det3DDataPreprocessor',
         voxel=True,
         voxel_layer=dict(
+            deterministic=True,
             max_num_points=32,
             max_voxels=(
-                20000,
-                40000,
+                40000
             ),
             point_cloud_range=[
                 -90,
