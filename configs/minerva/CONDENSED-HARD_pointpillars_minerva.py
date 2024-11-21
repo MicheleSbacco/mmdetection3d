@@ -139,6 +139,7 @@ model = dict(
             deterministic=True,
             max_num_points=32,
             max_voxels=(
+                20000,
                 40000
             ),
             point_cloud_range=[
@@ -299,7 +300,7 @@ point_cloud_range=[
     28.8,
     5,
 ]
-resume = True
+resume = False
 test_cfg = dict()
 test_dataloader = dict(
     batch_size=1,
