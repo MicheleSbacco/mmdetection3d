@@ -105,6 +105,14 @@ class PillarFeatureNet(nn.Module):
         Returns:
             torch.Tensor: Features of pillars.
         """
+        
+        
+        
+        print(f"\n\n{features.device}\n\n")
+        
+        
+        
+        
         features_ls = [features]
         # Find distance of x, y, and z from cluster center
         if self._with_cluster_center:
@@ -233,8 +241,70 @@ class DynamicPillarFeatureNet(PillarFeatureNet):
         self.pfn_layers = nn.ModuleList(pfn_layers)
         self.pfn_scatter = DynamicScatter(voxel_size, point_cloud_range,
                                           (mode != 'max'))
-        self.cluster_scatter = DynamicScatter(
-            voxel_size, point_cloud_range, average_points=True)
+        
+        
+        
+        # from mmdet3d.models.data_preprocessors.voxelize import DynamicScatter3D
+        # self.cluster_scatter = DynamicScatter3D(
+        #     voxel_size, point_cloud_range, average_points=True)
+        
+        # self.cluster_scatter = DynamicScatter(
+        #     voxel_size, point_cloud_range, average_points=True)
+
+
+
+
+    def scatter_points_dynamic(self, points, coors, pooling_type):
+        # Get the unique coors (no repeated elements) and the count of the elements
+        voxel_coors, inverse_indices, counts = torch.unique(coors, dim=0, return_counts=True, return_inverse=True)
+
+        # Count the "strange" coors (they had too many points, they have -1 in the index, and especially they had -1 in the z-coordinate)
+        counter = 0
+        for i in range(voxel_coors.shape[0]):
+            if voxel_coors[i][0] < 0 or voxel_coors[i][1] < 0 or voxel_coors[i][2] < 0:
+                counter += 1
+            else:
+                break
+
+        # Max-pooling
+        if pooling_type == "max":
+            # Create a tensor initialized to -inf for max-pooling
+            voxel_feats = torch.full((voxel_coors.shape[0], points.shape[1]), float('-inf'))
+
+            # Mask to identify valid indices
+            valid_mask = inverse_indices >= counter
+
+            # Get valid indices
+            valid_indices = inverse_indices[valid_mask]
+            points_valid = points[valid_mask]
+
+            # Perform max-pooling using advanced indexing
+            voxel_feats.index_put_((valid_indices,), points_valid, accumulate=True)
+
+            # Handle invalid coors (zero-padding)
+            voxel_feats[inverse_indices < counter] = 0.0
+
+        # Average-pooling
+        elif pooling_type == "avg":
+            # Create a tensor initialized to 0 for average-pooling
+            voxel_feats = torch.zeros(voxel_coors.shape[0], points.shape[1])
+
+            # Mask to identify valid indices
+            valid_mask = inverse_indices >= counter
+
+            # Get valid indices
+            valid_indices = inverse_indices[valid_mask]
+            points_valid = points[valid_mask]
+            counts_valid = counts[valid_indices].unsqueeze(1)  # Ensure counts are broadcastable
+
+            # Aggregate features efficiently
+            voxel_feats.index_add_(0, valid_indices, points_valid / counts_valid)
+
+        return voxel_feats, voxel_coors
+
+
+
+
 
     def map_voxel_center_to_point(self, pts_coors: Tensor, voxel_mean: Tensor,
                                   voxel_coors: Tensor) -> Tensor:
@@ -288,22 +358,22 @@ class DynamicPillarFeatureNet(PillarFeatureNet):
             torch.Tensor: Features of pillars.
         """
 
-
-        turn_into_cpu = False
-
-
         features_ls = [features]
         # Find distance of x, y, and z from cluster center
         if self._with_cluster_center:
-            voxel_mean, mean_coors = self.cluster_scatter(features, coors)
+            if str(features.device) == "cpu" and str(coors.device) == "cpu":
+                print("\n\nAbout to enter there\n\n")
+                voxel_mean, mean_coors = self.scatter_points_dynamic(features, coors, "avg")
+            else:
+                voxel_mean, mean_coors = self.cluster_scatter(features, coors)
             points_mean = self.map_voxel_center_to_point(
                 coors, voxel_mean, mean_coors)
             
+
+
+            print("\n\nCame out from there\n\n")
             
-            if str(features.device) == 'cpu':
-                turn_into_cpu = True
-                points_mean = points_mean.to('cpu')
-            
+
             
             # TODO: maybe also do cluster for reflectivity
             f_cluster = features[:, :3] - points_mean[:, :3]
@@ -328,7 +398,10 @@ class DynamicPillarFeatureNet(PillarFeatureNet):
         features = torch.cat(features_ls, dim=-1)
         for i, pfn in enumerate(self.pfn_layers):
             point_feats = pfn(features)
-            voxel_feats, voxel_coors = self.pfn_scatter(point_feats, coors)
+            if str(point_feats.device)=="cpu" and str(coors.device)=="cpu":
+                voxel_feats, voxel_coors = self.scatter_points_dynamic(point_feats, coors, "avg")
+            else:
+                self.pfn_scatter(point_feats, coors)
             if i != len(self.pfn_layers) - 1:
                 # need to concat voxel feats if it is not the last pfn
                 feat_per_point = self.map_voxel_center_to_point(
@@ -337,9 +410,9 @@ class DynamicPillarFeatureNet(PillarFeatureNet):
 
         
         
-        if turn_into_cpu:
-            voxel_feats = voxel_feats.to('cpu')
-            voxel_coors = voxel_coors.to('cpu')
+        # if turn_into_cpu:
+        #     voxel_feats = voxel_feats.to('cpu')
+        #     voxel_coors = voxel_coors.to('cpu')
         
         
         return voxel_feats, voxel_coors
