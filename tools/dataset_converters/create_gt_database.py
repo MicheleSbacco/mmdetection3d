@@ -279,9 +279,7 @@ def create_michele_custom_groundtruth_database(dataset_class_name,
 # Peculiarities:
 #   - Suppresses all the unused arguments("relative_path", "add_rgb", "lidar_only", "bev_only", "coors_range")
 #   - Suppresses the mask-related arguments ("mask_anno_path", "with_mask")
-# 
-# TODO: Compare with the "KITTI" version directly (this was copied from "michele_custom") and do this with all files when
-# will need to add images
+#
 #
 # TODO: Solve "RuntimeWarning: invalid value encountered in subtract gt_points[:, :3] -= gt_boxes_3d[i, :3]" that comes when
 # you execute the file
@@ -296,8 +294,10 @@ def create_minerva_polimove_groundtruth_database(dataset_class_name,
     # Adapt to the real dataset name
     if dataset_class_name == "minerva_polimove_cameralidar":
         dataset_class_name = "MinervaCameraLidarDataset"
+        use_images = False
     elif dataset_class_name == "minerva_polimove_lidaronly":
         dataset_class_name = "MinervaLidarOnlyDataset"
+        use_images = True
     else:
         print("Wrong dataset! Quitting...")
         return
@@ -308,22 +308,28 @@ def create_minerva_polimove_groundtruth_database(dataset_class_name,
 
 
     ######################################### BUILD DATASET ##########################################
+
+    # Create the configuration for the data_prefix, based on the use_images boolean
+    if not use_images:
+        data_prefix_config=dict(
+            pts='training/velodyne'
+        )
+    else:
+        data_prefix_config=dict(
+            pts='training/velodyne_reduced',
+            img='training/image_2'
+        )
+
     # Build a dataset using a connfiguration also present in the "mmdet3d/datasets" folder
-    # 
-    # Here: JUST LIDAR
     dataset_cfg = dict(
         type=dataset_class_name, 
         data_root=data_path, 
         ann_file=info_path,
         modality=dict(
             use_lidar=True,
-            use_camera=False,                               ##  With kitti was enabled just in case of segmentation mask. Probably
-                                                                #   for fusion I will need it True
+            use_camera=use_images,          # Just enable it in case of images
         ),
-        data_prefix=dict(
-            pts='training/velodyne'                         ## If not images, use "velodyne" point cloud (original one), not the
-                                                                #  reduced one at "velodyne_reduced"
-        ),
+        data_prefix=data_prefix_config,     # Depends on the use of images
         pipeline=[
             dict(
                 type='LoadPointsFromFile',
@@ -336,9 +342,7 @@ def create_minerva_polimove_groundtruth_database(dataset_class_name,
                 with_bbox_3d=True,
                 with_label_3d=True,
                 backend_args=None)
-        ]
-    )
-    # TODO: Update the configuration if need to use images (for now completely empty)
+        ])
 
     # Build the dataset with mmengine
     dataset = DATASETS.build(dataset_cfg)

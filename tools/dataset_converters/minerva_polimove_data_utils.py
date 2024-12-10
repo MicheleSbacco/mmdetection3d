@@ -93,11 +93,15 @@ def get_calib_path(idx,
 #
 # For information about the fields/what they mean/etc, see file "create_data.py" and search "More info about the data processing".
 
-def get_label_anno(label_path, use_images=False):
+def get_label_anno(label_path, use_images):
     # Create an empty instance of the "annotations" dictionary
     annotations = {}
     annotations.update({
         'name': [],
+        # 'truncated': [],  # Removed from the POLIMOVE dataset
+        # 'occluded': [],   # Removed from the POLIMOVE dataset
+        # 'alpha': [],      # Removed from the POLIMOVE dataset
+        # 'bbox': [],           # Used only in case of images
         'dimensions': [],
         'location': [],
         'rotation_y': []
@@ -111,40 +115,29 @@ def get_label_anno(label_path, use_images=False):
     num_gt = len(content)
     # Take the name as the first field of the ".txt" file
     annotations['name'] = np.array([x[0] for x in content])
-    # dimensions will convert hwl format to standard lhw(camera) format.
-    # As said by the comment above, they want a (length-height-width) format. So we need to make up for it
-    # TODO: Comment on the final version
-    # annotations['dimensions'] = np.array([[float(info) for info in x[4:7]]
-    #                                       for x in content
-    #                                       ]).reshape(-1, 3)[:, [0, 2, 1]]
+    # Comments:
+    #   - KITTI saves the dimensions in hwl format (height-width-length) while MMDetection3D-Camera saves it in lhw 
+    #     format, so they need to re-order them from KITTI to MMDetection3D 
+    #   - but we save them in lwh and then use the MMDetection3D-LiDAR format which is lwh, so no need to change
     annotations['dimensions'] = np.array([[float(info) for info in x[4:7]]
-                                          for x in content
-                                          ]).reshape(-1, 3)
+                                          for x in content]).reshape(-1, 3)
     # Take the annotations in the frame of POLIMOVE, and then update them to the frame of KittiCamera
     annotations['location'] = np.array([[float(info) for info in x[1:4]]
                                         for x in content]).reshape(-1, 3)
-    # TODO: Add comment on the change
-    # for i, position in enumerate(annotations['location']):
-    #     new_z = position[0]
-    #     new_y = -position[2]
-    #     new_x = -position[1]
-    #     annotations['location'][i][0] = new_x
-    #     annotations['location'][i][1] = new_y
-    #     annotations['location'][i][2] = new_z
-    # Take the rotation in degrees (POLIMOVE) and turn it into radians (KittiCamera)    TODO: Comment of the final version (not negative, nor in radians)
-    #                                                                                   TODO: If I do not manipulate the pointcloud, why should I change the bboxes?
+    # Add the rotation from the right field
     annotations['rotation_y'] = np.array([float(x[7])
                                           for x in content]).reshape(-1)
-    # Create this two "strange" values TODO: Understand what are they needed for
+    # Create this two values:
+    #   - First one is to give a number to the "important" instances (and "-1" to the DontCare objects)
+    #   - Second one is to give a number to every instance
     index = list(range(num_objects)) + [-1] * (num_gt - num_objects)
     annotations['index'] = np.array(index, dtype=np.int32)
     annotations['group_ids'] = np.arange(num_gt, dtype=np.int32)
-    # Just if images are used, add a field "bbox" to the annotations. For more info read the disclaimer before the
-    # name of the function. 
-    # TODO: assign the number of the fields according to what SUSTechPoints says and assigns
+    # Just if images are used, add a field "bbox" to the annotations (pixels of the image corresponding to
+    # the corners of the bbox)
     if use_images:
         annotations.update({'bbox':[]})
-        annotations['bbox'] = np.array([[float(info) for info in x[boh_riguarda1:boh_riguarda2]]
+        annotations['bbox'] = np.array([[float(info) for info in x[8:12]]
                                     for x in content]).reshape(-1, 4)
     return annotations
 
@@ -154,49 +147,6 @@ def _extend_matrix(mat):
     mat = np.concatenate([mat, np.array([[0., 0., 0., 1.]])], axis=0)
     return mat
 
-def add_difficulty_to_annos(info):
-    min_height = [40, 25,
-                  25]  # minimum height for evaluated groundtruth/detections
-    max_occlusion = [
-        0, 1, 2
-    ]  # maximum occlusion level of the groundtruth used for evaluation
-    max_trunc = [
-        0.15, 0.3, 0.5
-    ]  # maximum truncation level of the groundtruth used for evaluation
-    annos = info['annos']
-    dims = annos['dimensions']  # lhw format
-    bbox = annos['bbox']
-    height = bbox[:, 3] - bbox[:, 1]
-    occlusion = annos['occluded']
-    truncation = annos['truncated']
-    diff = []
-    easy_mask = np.ones((len(dims), ), dtype=bool)
-    moderate_mask = np.ones((len(dims), ), dtype=bool)
-    hard_mask = np.ones((len(dims), ), dtype=bool)
-    i = 0
-    for h, o, t in zip(height, occlusion, truncation):
-        if o > max_occlusion[0] or h <= min_height[0] or t > max_trunc[0]:
-            easy_mask[i] = False
-        if o > max_occlusion[1] or h <= min_height[1] or t > max_trunc[1]:
-            moderate_mask[i] = False
-        if o > max_occlusion[2] or h <= min_height[2] or t > max_trunc[2]:
-            hard_mask[i] = False
-        i += 1
-    is_easy = easy_mask
-    is_moderate = np.logical_xor(easy_mask, moderate_mask)
-    is_hard = np.logical_xor(hard_mask, moderate_mask)
-
-    for i in range(len(dims)):
-        if is_easy[i]:
-            diff.append(0)
-        elif is_moderate[i]:
-            diff.append(1)
-        elif is_hard[i]:
-            diff.append(2)
-        else:
-            diff.append(-1)
-    annos['difficulty'] = np.array(diff, np.int32)
-    return diff
 """
 End of the copied functions
 """
@@ -261,7 +211,7 @@ def get_minerva_polimove_image_info(path,
             if relative_path:
                 label_path = str(root_path / label_path)
             # Here, add all the needed annotations with the specified function
-            annotations = get_label_anno(label_path, use_images=use_images)
+            annotations = get_label_anno(label_path, use_images)
         
         # Add the "image","pc_info" dictionaries to the main "info" dictionary
         if use_images:                                                                          ## Used the "use_images" boolean here
@@ -270,6 +220,15 @@ def get_minerva_polimove_image_info(path,
         
         
         # Only if needed, update the "calib" dictionary, and add it to the main "info" dictionary
+        #
+        # NOTE: Highly modified to match with the POLIMOVE dataset
+        #   - We don't have FOUR projection matrices for four different cameras, but just one for
+        #     one camera
+        #     ------> will call it P0
+        #     ------> will be in line number 0
+        #   - We don't use the R0_rect matrix since we don't use stereo cameras
+        #   - We don't use the Tr_imu_to_velo
+        #     ------> will be in line number 1
         if use_images:                                                                          ## Used the "use_images" boolean here
             if calib:
                 calib_path = get_calib_path(
@@ -278,48 +237,19 @@ def get_minerva_polimove_image_info(path,
                     lines = f.readlines()
                 P0 = np.array([float(info) for info in lines[0].split(' ')[1:13]
                             ]).reshape([3, 4])
-                P1 = np.array([float(info) for info in lines[1].split(' ')[1:13]
-                            ]).reshape([3, 4])
-                P2 = np.array([float(info) for info in lines[2].split(' ')[1:13]
-                            ]).reshape([3, 4])
-                P3 = np.array([float(info) for info in lines[3].split(' ')[1:13]
-                            ]).reshape([3, 4])
                 if extend_matrix:
                     P0 = _extend_matrix(P0)
-                    P1 = _extend_matrix(P1)
-                    P2 = _extend_matrix(P2)
-                    P3 = _extend_matrix(P3)
-                R0_rect = np.array([
-                    float(info) for info in lines[4].split(' ')[1:10]
-                ]).reshape([3, 3])
-                if extend_matrix:
-                    rect_4x4 = np.zeros([4, 4], dtype=R0_rect.dtype)
-                    rect_4x4[3, 3] = 1.
-                    rect_4x4[:3, :3] = R0_rect
-                else:
-                    rect_4x4 = R0_rect
                 Tr_velo_to_cam = np.array([
                     float(info) for info in lines[5].split(' ')[1:13]
                 ]).reshape([3, 4])
-                Tr_imu_to_velo = np.array([
-                    float(info) for info in lines[6].split(' ')[1:13]
-                ]).reshape([3, 4])
                 if extend_matrix:
                     Tr_velo_to_cam = _extend_matrix(Tr_velo_to_cam)
-                    Tr_imu_to_velo = _extend_matrix(Tr_imu_to_velo)
                 calib_info['P0'] = P0
-                calib_info['P1'] = P1
-                calib_info['P2'] = P2
-                calib_info['P3'] = P3
-                calib_info['R0_rect'] = rect_4x4
                 calib_info['Tr_velo_to_cam'] = Tr_velo_to_cam
-                calib_info['Tr_imu_to_velo'] = Tr_imu_to_velo
                 info['calib'] = calib_info
         # Add the "annotations" dictionary to the main "info" dictionary
         if annotations is not None:
             info['annos'] = annotations
-            # Removing the line that added the difficulty here, by using the function "add_difficulty_to_annos"
-            #add_difficulty_to_annos(info)
         # Return the main "info" dictionary
         return info
 

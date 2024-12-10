@@ -446,18 +446,17 @@ def update_michele_custom_infos(pkl_path, out_dir, use_images=True):
 # Copied function: from "update_kitti_infos"
 # Peculiarities:
 #   - Takes a boolean "use_images" as input, to remove the modifications linked to images
-#   - Additionally has a boolean "keep_calib" that, if TRUE, keeps the "calib" elements even if "use_images" is FALSE
-def update_minerva_polimove_infos(pkl_path, out_dir, use_images=True):
+def update_minerva_polimove_infos(pkl_path, out_dir, use_images):
     
     # Just some warning prints
     print(f'{pkl_path} will be modified.')
     if out_dir in pkl_path:
         print(f'Warning, you may overwriting '
               f'the original data {pkl_path}.')
-        time.sleep(0.5)
 
     # IMPORTANT:    - these are the classes that will be considered as "relevant". The other ones will be set to "-1"
-    #               - the class 'Extra' is needed because otherwise the class 'Car' is considered as three different classes
+    #               - the class 'Extra' is needed because otherwise the class 'Car' is considered as three different classes, this 
+    #                 is because of the way that the tuples are handled
     METAINFO = {
         'classes': ('Car', 'Extra')
     }
@@ -489,49 +488,44 @@ def update_minerva_polimove_infos(pkl_path, out_dir, use_images=True):
         # Assign the instance index
         temp_data_info['sample_idx'] = ori_info_dict['point_cloud']['pc_idx']       ## MODIFIED: Now only takes the id from the LiDAR
 
-        # Assign the projection matrices
+        # Assign the projection matrices, image path and shape
+        # 
+        # NOTE:
+        #   - Here we just consider the important matrices as we have done in the file called 
+        #     "minerva_polimove_data_utils.py" (look for the words "calib" dictionary)
+        #   - We will transform all "CAM2" names in "CAM0"
         if use_images:                                                                      ## Used the "use_images" boolean here
             temp_data_info['images']['CAM0']['cam2img'] = ori_info_dict['calib'][
                 'P0'].tolist()
-            temp_data_info['images']['CAM1']['cam2img'] = ori_info_dict['calib'][
-                'P1'].tolist()
-            temp_data_info['images']['CAM2']['cam2img'] = ori_info_dict['calib'][
-                'P2'].tolist()
-            temp_data_info['images']['CAM3']['cam2img'] = ori_info_dict['calib'][
-                'P3'].tolist()
-
-        # Assign the image path and shape. Assign the lidar path and number of features.
-        if use_images:                                                                                          ## Used the "use_images" boolean here
-            temp_data_info['images']['CAM2']['img_path'] = Path(ori_info_dict['image']['image_path']).name
+            temp_data_info['images']['CAM0']['img_path'] = Path(ori_info_dict['image']['image_path']).name
             h, w = ori_info_dict['image']['image_shape']
-            temp_data_info['images']['CAM2']['height'] = h
-            temp_data_info['images']['CAM2']['width'] = w
+            temp_data_info['images']['CAM0']['height'] = h
+            temp_data_info['images']['CAM0']['width'] = w
+
+        # Assign the lidar path and number of features.
         temp_data_info['lidar_points']['num_pts_feats'] = ori_info_dict['point_cloud']['num_features']
         temp_data_info['lidar_points']['lidar_path'] = Path(ori_info_dict['point_cloud']['velodyne_path']).name
 
         # Assign other "calib" infos
         if use_images:                                                                                          ## Used the "use_images" boolean here
-            rect = ori_info_dict['calib']['R0_rect'].astype(np.float32)
             Trv2c = ori_info_dict['calib']['Tr_velo_to_cam'].astype(np.float32)
-            lidar2cam = rect @ Trv2c
-            temp_data_info['images']['CAM2']['lidar2cam'] = lidar2cam.tolist()
+            temp_data_info['images']['CAM0']['lidar2cam'] = Trv2c.tolist()
             temp_data_info['lidar_points']['Tr_velo_to_cam'] = Trv2c.tolist()
             
             temp_data_info['images']['CAM0']['lidar2img'] = (
-                ori_info_dict['calib']['P0'] @ lidar2cam).tolist()
-            temp_data_info['images']['CAM1']['lidar2img'] = (
-                ori_info_dict['calib']['P1'] @ lidar2cam).tolist()
-            temp_data_info['images']['CAM2']['lidar2img'] = (
-                ori_info_dict['calib']['P2'] @ lidar2cam).tolist()
-            temp_data_info['images']['CAM3']['lidar2img'] = (
-                ori_info_dict['calib']['P3'] @ lidar2cam).tolist()
-            cam2img = ori_info_dict['calib']['P2']
+                ori_info_dict['calib']['P0'] @ Trv2c).tolist()
+            lidar2img = temp_data_info['images']['CAM0']['lidar2img']   # TODO: Check here if it is correct, has been modified (because my
+                                                                        #       [localization, dimensions] coordinates are not in the camera
+                                                                        #       frame but in the lidar frame)
 
         # for potential usage
+        # NOTE: Probably will never use them since:
+        #   - R0_rect is needed for stereo cameras
+        #   - Tr_imu_to_velo is needed for other stuff (odometry)
         if use_images:                                                                              ## Used the "use_images" boolean here
             temp_data_info['images']['R0_rect'] = ori_info_dict['calib'][
                 'R0_rect'].astype(np.float32).tolist()
-            temp_data_info['lidar_points']['Tr_imu_to_velo'] = ori_info_dict[   ## TODO: Check because maybe could still be inserted (even w/out images)
+            temp_data_info['lidar_points']['Tr_imu_to_velo'] = ori_info_dict[
                 'calib']['Tr_imu_to_velo'].astype(np.float32).tolist()
 
         # For loop:
@@ -545,8 +539,6 @@ def update_minerva_polimove_infos(pkl_path, out_dir, use_images=True):
             for instance_id in range(num_instances):
                 empty_instance = get_empty_instance()
                 if use_images:                                                          ## Used the "use_images" boolean here
-                                                                                        # TODO: Implement this feature before, it was removed but it makes
-                                                                                        #       sense because it indicates the pixels of the bbox
                     empty_instance['bbox'] = anns['bbox'][instance_id].tolist()
 
                 if anns['name'][instance_id] in METAINFO['classes']:
@@ -556,21 +548,16 @@ def update_minerva_polimove_infos(pkl_path, out_dir, use_images=True):
                     ignore_class_name.add(anns['name'][instance_id])
                     empty_instance['bbox_label'] = -1
 
-                if use_images:                                                          ## Used the "use_images" boolean here
-                                                                                        # TODO: There is a repetition with the lines above
-                    empty_instance['bbox'] = anns['bbox'][instance_id].tolist()
-
                 loc = anns['location'][instance_id]
                 dims = anns['dimensions'][instance_id]
                 rots = anns['rotation_y'][:, None][instance_id]
 
-                # TODO: Check because probably here there are some issues with the origin of boxes
-                dst = np.array([0.5, 0.5, 0.5])
-                src = np.array([0.5, 1.0, 0.5])
-
-                center_3d = loc + dims * (dst - src)
                 if use_images:                                                                          ## Used the "use_images" boolean here
-                    center_2d = points_cam2img(center_3d.reshape([1, 3]), cam2img, with_depth=True)
+                    # TODO: Check because probably here there are some issues with the origin of boxes
+                    dst = np.array([0.5, 0.5, 0.5])
+                    src = np.array([0.5, 0.5, 0.5])
+                    center_3d = loc + dims * (dst - src)
+                    center_2d = points_cam2img(center_3d.reshape([1, 3]), lidar2img, with_depth=True)
                     center_2d = center_2d.squeeze().tolist()
                     empty_instance['center_2d'] = center_2d[:2]
                     empty_instance['depth'] = center_2d[2]
@@ -579,23 +566,58 @@ def update_minerva_polimove_infos(pkl_path, out_dir, use_images=True):
                 empty_instance['bbox_3d'] = gt_bboxes_3d
                 empty_instance['bbox_label_3d'] = copy.deepcopy(
                     empty_instance['bbox_label'])
-                if use_images:                                                          ## Used the "use_images" boolean here
-                                                                                        # TODO:There is a repetition with the lines above
-                    empty_instance['bbox'] = anns['bbox'][instance_id].tolist()
+                
                 empty_instance['index'] = anns['index'][instance_id].tolist()
                 empty_instance['group_id'] = anns['group_ids'][
                     instance_id].tolist()
-                # ATTENTION: Here commented the part about difficulty
-                # empty_instance['difficulty'] = anns['difficulty'][
-                #     instance_id].tolist()
                 empty_instance['num_lidar_pts'] = anns['num_points_in_gt'][
                     instance_id].tolist()
                 empty_instance = clear_instance_unused_keys(empty_instance)
                 instance_list.append(empty_instance)
             temp_data_info['instances'] = instance_list
+            
+            # Returns a dictionary like this.
+            #   - CAM_number (in most cases just one cam): list (The list contains one dictionary for each 
+            #                                                   != "DontCare" instance. The dictionaries have 
+            #                                                   this structure...)
+            #       - bbox_label: int (the index of the category, counted from 0, can take it from the 
+            #         METAINFO['classes'] tuple)
+            #       - bbox_label_3d: int (same)
+            #       - bbox: array(4,) (easy peasy, already in the "annos" dictionary)
+            #       - center_2d: array(2,) (it's the coordinates of the pixels, AFTER they have been
+            #                               divided by the "z" coordinate)
+            #       - depth: int (it's the "z" coordinate of the image coordinates, BEFORE they have
+            #                     been made homogeneous with the "z" division)
+            #       - bbox_3d_isvalid: bool (always set to True)
+            #       - bbox_3d: array(7,) (concatenation of [loc, dim, rot] along axis=1)
+            #       - velocity: int (always set to -1)
+            # 
+            # -----------------------------------------------------------------------------------------------
+            # 
+            # - KITTI does this with a dedicated function, and by re-computing stuff that was already defined before.
+            # - I will just use the already-defined stuff in "instance_list" and assign them to the correct keys
+            #      |
+            #      |
+            #      |
+            #      V
             if use_images:                                                                              ## Used the "use_images" boolean here
-                cam_instances = generate_kitti_camera_instances(ori_info_dict)
-                temp_data_info['cam_instances'] = cam_instances
+                # Create the main dictionary with the "CAM0" list
+                temp_data_info['cam_instances'] = {'CAM0': []}
+                # Go through the instances in "temp_data_info['instances']" 
+                for instance in temp_data_info['instances']:
+                    # Just add them if the bbox label is different from "-1" (which would mean that the label is 'DontCare')
+                    if str(instance['bbox_label']) != str(-1):
+                        # Append to the list a dictionary with the right fields and values
+                        temp_data_info['cam_instances']['CAM0'].append({
+                            'bbox_label': instance['bbox_label'],
+                            'bbox_label_3d': instance['bbox_label'],
+                            'bbox': instance['bbox'],
+                            'center_2d': instance['center_2d'],
+                            'depth': instance['depth'],
+                            'bbox_3d_isvalid': True,
+                            'bbox_3d': instance['bbox_3d'],
+                            'velocity': -1
+                        })
         
         #   1. Remove the unused keys
         #   2. Append the updated and "cleared" dictionary to the "converted_list"
@@ -610,8 +632,6 @@ def update_minerva_polimove_infos(pkl_path, out_dir, use_images=True):
     # The actual final file is NOT only the updated dictionary.
     # It is a composed dictionary that has metainfos with:
     #   - The categories, for the classes
-    #   - The name of the dataset (TODO: Useless??)
-    #   - The information about the version (TODO: Useless??)
     metainfo = dict()
     metainfo['categories'] = {k: i for i, k in enumerate(METAINFO['classes'])}
     if ignore_class_name:
@@ -633,7 +653,7 @@ def update_kitti_infos(pkl_path, out_dir):
     if out_dir in pkl_path:
         print(f'Warning, you may overwriting '
               f'the original data {pkl_path}.')
-        time.sleep(5)
+        # time.sleep(5)
     METAINFO = {
         'classes': ('Pedestrian', 'Cyclist', 'Car', 'Van', 'Truck',
                     'Person_sitting', 'Tram', 'Misc'),
@@ -642,6 +662,10 @@ def update_kitti_infos(pkl_path, out_dir):
     data_list = mmengine.load(pkl_path)
     print('Start updating:')
     converted_list = []
+    
+    # To avoid problems with KITTI when the "data/kitti/testing" folder is empty
+    ignore_class_name = set()
+    
     for ori_info_dict in mmengine.track_iter_progress(data_list):
         temp_data_info = get_empty_standard_data_info()
 
@@ -746,6 +770,17 @@ def update_kitti_infos(pkl_path, out_dir):
                 instance_list.append(empty_instance)
             temp_data_info['instances'] = instance_list
             cam_instances = generate_kitti_camera_instances(ori_info_dict)
+            
+            # print(f"\n\n\n\n#####################################\n\n\nInstance list:")
+            # for element in instance_list:
+            #     print(element)
+            # print(f"\n\n{ori_info_dict}\n\n\n{cam_instances}")
+            # for i, element in enumerate(cam_instances['CAM2']):
+            #     print(f"\n-------------------------------\nElement num. {i}")
+            #     for key in element:
+            #         print(f"{key}: {element[key]}")
+            # print("\n\n\n\n")
+            
             temp_data_info['cam_instances'] = cam_instances
         
         temp_data_info, _ = clear_data_info_unused_keys(temp_data_info)
@@ -1551,7 +1586,7 @@ def update_pkl_infos(dataset, out_dir, pkl_path):
     elif dataset.lower() == 's3dis':
         update_s3dis_infos(pkl_path=pkl_path, out_dir=out_dir)
     elif dataset == 'minerva_polimove_cameralidar':
-        update_minerva_polimove_infos(pkl_path, out_dir)
+        update_minerva_polimove_infos(pkl_path, out_dir, use_images=True)
     elif dataset == 'minerva_polimove_lidaronly':
         update_minerva_polimove_infos(pkl_path, out_dir, use_images=False)
     else:

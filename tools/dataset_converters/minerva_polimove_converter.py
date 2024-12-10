@@ -43,45 +43,57 @@ def _calculate_num_points_in_gt(data_path,
         # If using images, get the pointers to the needed "calib" dictionaries
         if use_images:                                                          ## Used the "use_images" boolean here
             calib = info['calib']
-            rect = calib['R0_rect']
             Trv2c = calib['Tr_velo_to_cam']
-            P2 = calib['P2']
+            P0 = calib['P0']
+            # We don't have the R0_rect matrix but the built-in function below "remove_outside_points" requires it. So
+            # we just make it an identity (will then be used JUST ONCE to pre-multiply the Tr-velo_to_cam)
+            rect = np.eye(4)
         # If using images, resize the point-cloud
         if use_images:                                                          ## Used the "use_images" boolean here
             image_info = info['image']
             if remove_outside:
                 points_v = box_np_ops.remove_outside_points(
-                    points_v, rect, Trv2c, P2, image_info['image_shape'])
+                    points_v, rect, Trv2c, P0, image_info['image_shape'])
         # Compute the number of "not-Don't-Care" objects
         annos = info['annos']
-        num_obj = len([n for n in annos['name'] if n != 'DontCare'])
+        num_obj = len([name for name in annos['name'] if name != 'DontCare'])
         # Take the information of the ground truth bounding boxes (dimension, location, rotation)
         dims = annos['dimensions'][:num_obj]
         loc = annos['location'][:num_obj]
         rots = annos['rotation_y'][:num_obj]
-        # If using images, convert bbox's location and dimentions to KittiCamera frame...
-        # ...else, just use the original bbox
+        
+
+
+
+
+
+        # TODO: Check here because there is a conversion from camera_frame to lidar_frame. But we already have all the
+        # bboxes in lidar frame...
         gt_boxes_camera = np.concatenate([loc, dims, rots[..., np.newaxis]],
                                          axis=1)
-        if use_images:
-            gt_boxes = box_np_ops.box_camera_to_lidar(
-                gt_boxes_camera, rect, Trv2c)
-        else:
-            gt_boxes = gt_boxes_camera
+        gt_boxes = gt_boxes_camera
+        
+        # if use_images:
+        #     gt_boxes = box_np_ops.box_camera_to_lidar(
+        #         gt_boxes_camera, rect, Trv2c)
+        # else:
+        #     gt_boxes = gt_boxes_camera
+        
+
+
+
+
+
         # Count the number of LiDAR points in the point-cloud
         #                       |
         #                       |
         #                       V
         # Now have checked on SUSTechPoints on three files and it works (just some errors of 
-        # 2-3 points but nothing to be concerned). For reference leave the tested files with 
-        # corresponding values.
-        #   1723235842419750615.bin: [1033   32]
-        #   1723235505512511802.bin: [20]
-        #   1723235388718397661.bin: [ 215 4230]
+        # 2-3 points but nothing to be concerned).
         #                       |
         #                       |
         #                       V
-        # Before adding in the part of "origin" it did NOT work
+        # Before adding in the part of "origin=(...)" it did NOT work
         indices = box_np_ops.points_in_rbbox(points_v[:, :3], gt_boxes, origin=(0.5, 0.5, 0.5))
         num_points_in_gt = indices.sum(0)
         # Just add a "-1" for the instances of "Don't Care" class
@@ -127,7 +139,7 @@ def create_minerva_polimove_info_file(data_path,
         image_ids=train_img_ids,
         relative_path=relative_path)
     # Add the number of LiDAR points for each instance in the "annos" field. 
-    _calculate_num_points_in_gt(data_path, minerva_polimove_infos_train, relative_path, use_images)         ## TODO: Check why it does not work
+    _calculate_num_points_in_gt(data_path, minerva_polimove_infos_train, relative_path, use_images)
     # Save the dictionary on the related ".pkl" file
     filename = save_path / f'{pkl_prefix}_infos_train.pkl'
     print(f'{pkl_prefix} info train file is saved to {filename}')
@@ -142,7 +154,7 @@ def create_minerva_polimove_info_file(data_path,
         calib=True,
         image_ids=val_img_ids,
         relative_path=relative_path)
-    _calculate_num_points_in_gt(data_path, minerva_polimove_infos_val, relative_path, use_images)           ## TODO: Check why it does not work
+    _calculate_num_points_in_gt(data_path, minerva_polimove_infos_val, relative_path, use_images)
     filename = save_path / f'{pkl_prefix}_infos_val.pkl'
     print(f'{pkl_prefix} info val file is saved to {filename}')
     mmengine.dump(minerva_polimove_infos_val, filename)
@@ -173,7 +185,7 @@ def create_minerva_polimove_info_file(data_path,
 # Copied function: function to "cut" the point clouds depending on the FOV of the cameras 
 # Peculiarities:
 #   - ignores "with_back" because always set to "False"
-def create_michele_custom_reduced_point_cloud(data_path,
+def create_minerva_polimove_reduced_point_cloud(data_path,
                                pkl_prefix,
                                train_info_path=None,
                                val_info_path=None,
@@ -216,12 +228,13 @@ def create_michele_custom_reduced_point_cloud(data_path,
 # Copied function: actual cutter of the point cloud in account of "create_reduced_point_cloud"
 # Peculiarities:
 #   - ignores "with_back" because always set to "False"
+#   - the "calibration" matrices have been changed (P2 to P0) and the rectification matrix
+#     has been made to an identity matrix
 def _create_reduced_point_cloud(data_path,
                                 info_path,
                                 save_path=None,
                                 back=False,
-                                num_features=4,
-                                front_camera_id=2):
+                                num_features=4):
     """Create reduced point clouds for given info.
 
     Args:
@@ -232,43 +245,35 @@ def _create_reduced_point_cloud(data_path,
         back (bool, optional): Whether to flip the points to back.
             Default: False.
         num_features (int, optional): Number of point features. Default: 4.
-        front_camera_id (int, optional): The referenced/front camera ID.
-            Default: 2.
     """
     # Load the whole dictionary from the ".pkl" info file path
     kitti_infos = mmengine.load(info_path)
 
     # Process the the point clouds one-by-one
     for info in mmengine.track_iter_progress(kitti_infos):
+        
         # Get the pointers to the main dictionaries of the specific instance
         pc_info = info['point_cloud']
         image_info = info['image']
         calib = info['calib']
-        # Get the pointer to the "rect" variable for the transformation
-        rect = calib['R0_rect']
 
         # Get the path to the specific point cloud
         v_path = pc_info['velodyne_path']
         v_path = Path(data_path) / v_path
-        
         # Load the points on a vector --> Checked: the vector is a [n][4] array with n="number of LiDAR points"
         points_v = np.fromfile(
             str(v_path), dtype=np.float32,
             count=-1).reshape([-1, num_features])
-        # Select the right camera number, and the the camera projection matrix
-        if front_camera_id == 2:
-            P2 = calib['P2']
-        else:
-            P2 = calib[f'P{str(front_camera_id)}']
+        
+        # Select the camera projection matrix
+        P0 = calib['P0']
         # Get the trasformation from "cam_ref" to "velo_ref"
         Trv2c = calib['Tr_velo_to_cam']
+        # Create a fake R0_rect matrix (essentially an identity matrix)
+        rect = np.eye(4)
         
         # Use a dedicated function to remove the points that are outside of the camera FOV
-            # first remove z < 0 points
-            # keep = points_v[:, -1] > 0
-            # points_v = points_v[keep]
-            # then remove outside.
-        points_v = box_np_ops.remove_outside_points(points_v, rect, Trv2c, P2,                      ## Uses a complex "box_np_ops" function
+        points_v = box_np_ops.remove_outside_points(points_v, rect, Trv2c, P0,                      ## Uses a complex "box_np_ops" function
                                                     image_info['image_shape'])
         
         # Eventually create a new directory for the point clouds, and create the name of the new p.c.-file
