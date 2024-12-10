@@ -1,6 +1,11 @@
-## Changes made: modified folder and ".pkl" files name, to adapt to the new "michele_custom" prefix
-
-## Still, uses "velodyne_reduced" because it is used if "use_images"=True
+# Changes made w.r.t. standard "kitti-3d-car":
+# 
+#   - set "input_modality" to "use_camera=True"
+# 
+#   - added "LoadImageFromFile" in the "train_pipeline" and "test_pipeline"
+#   - in the same pipelines, add three keys in Pack3DDetInputs ("img", "gt_bboxes", "gt_labels")
+# 
+#   - in the dataloaders.dataset.data_prefix add img="training/image_2"
 
 
 
@@ -9,22 +14,9 @@ dataset_type = 'KittiDataset'
 data_root = 'data/kitti/'
 class_names = ['Car']
 point_cloud_range = [0, -40, -3, 70.4, 40, 1]
-input_modality = dict(use_lidar=True, use_camera=False)
+input_modality = dict(use_lidar=True, use_camera=True)
 metainfo = dict(classes=class_names)
 
-# Example to use different file client
-# Method 1: simply set the data root and let the file I/O module
-# automatically infer from prefix (not support LMDB and Memcache yet)
-
-# data_root = 's3://openmmlab/datasets/detection3d/kitti/'
-
-# Method 2: Use backend_args, file_client_args in versions before 1.1.0
-# backend_args = dict(
-#     backend='petrel',
-#     path_mapping=dict({
-#         './data/': 's3://openmmlab/datasets/detection3d/',
-#          'data/': 's3://openmmlab/datasets/detection3d/'
-#      }))
 backend_args = None
 
 db_sampler = dict(
@@ -48,9 +40,13 @@ train_pipeline = [
     dict(
         type='LoadPointsFromFile',
         coord_type='LIDAR',
-        load_dim=4,  # x, y, z, intensity
+        load_dim=4,
         use_dim=4,
         backend_args=backend_args),
+    
+    # Added (OBVIOUSLY) for the visualization of images
+    dict(type='LoadImageFromFile', backend_args=backend_args),
+    
     dict(type='LoadAnnotations3D', with_bbox_3d=True, with_label_3d=True),
     dict(type='ObjectSample', db_sampler=db_sampler),
     dict(
@@ -59,17 +55,23 @@ train_pipeline = [
         translation_std=[1.0, 1.0, 0.5],
         global_rot_range=[0.0, 0.0],
         rot_range=[-0.78539816, 0.78539816]),
-    dict(type='RandomFlip3D', flip_ratio_bev_horizontal=0.5),
     dict(
         type='GlobalRotScaleTrans',
         rot_range=[-0.78539816, 0.78539816],
-        scale_ratio_range=[0.95, 1.05]),
+        scale_ratio_range=[0.95, 1.05],
+        translation_std=[0.2, 0.2, 0.2]),
+    dict(type='RandomFlip3D', flip_ratio_bev_horizontal=0.5),
     dict(type='PointsRangeFilter', point_cloud_range=point_cloud_range),
     dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range),
     dict(type='PointShuffle'),
     dict(
         type='Pack3DDetInputs',
-        keys=['points', 'gt_bboxes_3d', 'gt_labels_3d'])
+
+        # Added some keys related to images (img, gt_bboxes, gt_labels)
+        keys=[
+            'points', 'img', 'gt_bboxes_3d', 'gt_labels_3d', 'gt_bboxes',
+            'gt_labels'
+        ])
 ]
 test_pipeline = [
     dict(
@@ -78,6 +80,10 @@ test_pipeline = [
         load_dim=4,
         use_dim=4,
         backend_args=backend_args),
+    
+    # Added (OBVIOUSLY) for the visualization of images
+    dict(type='LoadImageFromFile', backend_args=backend_args),
+    
     dict(
         type='MultiScaleFlipAug3D',
         img_scale=(1333, 800),
@@ -107,8 +113,8 @@ eval_pipeline = [
     dict(type='Pack3DDetInputs', keys=['points'])
 ]
 train_dataloader = dict(
-    batch_size=6,
-    num_workers=4,
+    batch_size=1,
+    num_workers=1,
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=True),
     dataset=dict(
@@ -117,14 +123,11 @@ train_dataloader = dict(
         dataset=dict(
             type=dataset_type,
             data_root=data_root,
-            ann_file='kitti_infos_train.pkl',
-            data_prefix=dict(pts='training/velodyne_reduced'),
-            pipeline=train_pipeline,
             modality=input_modality,
-            test_mode=False,
+            ann_file='kitti_infos_train.pkl',
+            data_prefix=dict(pts='training/velodyne_reduced', img="training/image_2"),
+            pipeline=train_pipeline,
             metainfo=metainfo,
-            # we use box_type_3d='LiDAR' in kitti and nuscenes dataset
-            # and box_type_3d='Depth' in sunrgbd and scannet dataset.
             box_type_3d='LiDAR',
             backend_args=backend_args)))
 val_dataloader = dict(
@@ -136,7 +139,7 @@ val_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        data_prefix=dict(pts='training/velodyne_reduced'),
+        data_prefix=dict(pts='training/velodyne_reduced', img="training/image_2"),
         ann_file='kitti_infos_val.pkl',
         pipeline=test_pipeline,
         modality=input_modality,
@@ -153,7 +156,7 @@ test_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        data_prefix=dict(pts='training/velodyne_reduced'),
+        data_prefix=dict(pts='training/velodyne_reduced', img="training/image_2"),
         ann_file='kitti_infos_val.pkl',
         pipeline=test_pipeline,
         modality=input_modality,

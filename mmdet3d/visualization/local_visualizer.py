@@ -1044,10 +1044,19 @@ class Det3DLocalVisualizer(DetLocalVisualizer):
 
         if draw_gt and data_sample is not None:
             if 'gt_instances_3d' in data_sample:
+                
+                # NOTE 
+                # Update for the palette part
+                #   - Originally was just [(0, 0, 255)] but would give an error if there were more classes
+                #     than one
+                #   - So, to make it more flexible, will make the palette have as many elements as there
+                #     are classes
+                gt_palette = [(0, 0, 255) for _ in range(len(classes))]
+                
                 gt_data_3d = self._draw_instances_3d(
                     data_input, data_sample.gt_instances_3d,
-                    data_sample.metainfo, vis_task, show_pcd_rgb, [(0, 0, 255)])            ## Modified palette to make the "ground truth" bboxes 
-                                                                                            #  of color blue
+                    data_sample.metainfo, vis_task, show_pcd_rgb, gt_palette)   ## Modified palette to make the "ground truth" bboxes 
+                                                                                #  of color blue
             if 'gt_instances' in data_sample:
                 if len(data_sample.gt_instances) > 0:
                     assert 'img' in data_input
