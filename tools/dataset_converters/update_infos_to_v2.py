@@ -521,12 +521,13 @@ def update_minerva_polimove_infos(pkl_path, out_dir, use_images):
         # for potential usage
         # NOTE: Probably will never use them since:
         #   - R0_rect is needed for stereo cameras
-        #   - Tr_imu_to_velo is needed for other stuff (odometry)
-        if use_images:                                                                              ## Used the "use_images" boolean here
-            temp_data_info['images']['R0_rect'] = ori_info_dict['calib'][
-                'R0_rect'].astype(np.float32).tolist()
-            temp_data_info['lidar_points']['Tr_imu_to_velo'] = ori_info_dict[
-                'calib']['Tr_imu_to_velo'].astype(np.float32).tolist()
+        #   - Tr_imu_to_velo is only needed for other stuff (odometry)
+        
+        # if use_images:                                                                              ## Used the "use_images" boolean here
+        #     temp_data_info['images']['R0_rect'] = ori_info_dict['calib'][
+        #         'R0_rect'].astype(np.float32).tolist()
+        #     temp_data_info['lidar_points']['Tr_imu_to_velo'] = ori_info_dict[
+        #         'calib']['Tr_imu_to_velo'].astype(np.float32).tolist()
 
         # For loop:
         #   - goes through the instances inside the annotations one by one: a loop(instances in annos) in the loop(scans in dictionary)

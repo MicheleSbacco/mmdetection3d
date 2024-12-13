@@ -240,7 +240,7 @@ def get_minerva_polimove_image_info(path,
                 if extend_matrix:
                     P0 = _extend_matrix(P0)
                 Tr_velo_to_cam = np.array([
-                    float(info) for info in lines[5].split(' ')[1:13]
+                    float(info) for info in lines[1].split(' ')[1:13]
                 ]).reshape([3, 4])
                 if extend_matrix:
                     Tr_velo_to_cam = _extend_matrix(Tr_velo_to_cam)

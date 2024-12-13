@@ -179,7 +179,7 @@ class MinervaCameraLidarDataset(Det3DDataset):
         # This line is probably NOT needed because KITTI_dataset used it for the conversion to CameraInstance3DBoxes, but
         # we directly use the lidar...
         # TODO: check this assumption is correct
-        lidar2cam = np.array(info['images']['CAM2']['lidar2cam'])
+        lidar2cam = np.array(info['images']['CAM0']['lidar2cam'])
         
         # ATTENTION: Here below the type of box is defined. This part is really important to make the overall dataset work.
         #       - More information about the conventions on frames etc. can be found in the files that
