@@ -1,30 +1,48 @@
-# Changes made w.r.t. standard "kitti-3d-car":
+
+'''
+######################################### DESCRIPTION ##########################################
 # 
-#   - set "input_modality" to "use_camera=True"
+### See "minerva_lidar_only_dataset.py" to see more information about dataloaders etc.
 # 
-#   - added "LoadImageFromFile" in the "train_pipeline" and "test_pipeline"
-#   - in the same pipelines, add three keys in Pack3DDetInputs ("img", "gt_bboxes", "gt_labels")
 # 
-#   - in the dataloaders.dataset.data_prefix add img="training/image_2"
+### Copied from 
+#       - "minerva_lidar_only_dataset.py"
+#       - "kitti-3d-car_MULTIVIEW.py"
+'''
 
 
+
+
+
+
+'''
+######################################### PARAMETERS ##########################################
+'''
 
 # dataset settings
-dataset_type = 'KittiDataset'
-data_root = 'data/kitti/'
+dataset_type = 'MinervaCameraLidarDataset'
+data_root = 'data/minerva_polimove/'
 class_names = ['Car']
-point_cloud_range = [0, -40, -3, 70.4, 40, 1]
+point_cloud_range = [-70, -20, -2, 150, 20, 5]                  ## How to adjust? Use "tools/misc/browse_datase.py" after setting 
+                                                                #  the line "PointsRangeFilter" in test_pipeline to NON-commented
 input_modality = dict(use_lidar=True, use_camera=True)
 metainfo = dict(classes=class_names)
+default_backend_args = None
 
-backend_args = None
+
+
+
+
+
+'''
+######################################### DB-SAMPLER ##########################################
+'''
 
 db_sampler = dict(
     data_root=data_root,
-    info_path=data_root + 'kitti_dbinfos_train.pkl',
+    info_path=data_root + 'minerva_polimove_dbinfos_train.pkl',
     rate=1.0,
     prepare=dict(
-        filter_by_difficulty=[-1], 
         filter_by_min_points=dict(Car=5)),
     classes=class_names,
     sample_groups=dict(Car=15),
@@ -33,8 +51,17 @@ db_sampler = dict(
         coord_type='LIDAR',
         load_dim=4,
         use_dim=4,
-        backend_args=backend_args),
-    backend_args=backend_args)
+        backend_args=default_backend_args),
+    backend_args=default_backend_args)
+
+
+
+
+
+
+'''
+######################################### PIPELINES ##########################################
+'''
 
 train_pipeline = [
     dict(
@@ -42,10 +69,10 @@ train_pipeline = [
         coord_type='LIDAR',
         load_dim=4,
         use_dim=4,
-        backend_args=backend_args),
+        backend_args=default_backend_args),
     
     # Added (OBVIOUSLY) for the visualization of images
-    dict(type='LoadImageFromFile', backend_args=backend_args),
+    dict(type='LoadImageFromFile', backend_args=default_backend_args),
     
     dict(type='LoadAnnotations3D', with_bbox_3d=True, with_label_3d=True),
     dict(type='ObjectSample', db_sampler=db_sampler),
@@ -71,18 +98,18 @@ train_pipeline = [
         keys=[
             'points', 'img', 'gt_bboxes_3d', 'gt_labels_3d', 'gt_bboxes',
             'gt_labels'
-        ])
-]
+        ])]
+
 test_pipeline = [
     dict(
         type='LoadPointsFromFile',
         coord_type='LIDAR',
         load_dim=4,
         use_dim=4,
-        backend_args=backend_args),
+        backend_args=default_backend_args),
     
     # Added (OBVIOUSLY) for the visualization of images
-    dict(type='LoadImageFromFile', backend_args=backend_args),
+    dict(type='LoadImageFromFile', backend_args=default_backend_args),
     
     dict(
         type='MultiScaleFlipAug3D',
@@ -99,19 +126,34 @@ test_pipeline = [
             dict(
                 type='PointsRangeFilter', point_cloud_range=point_cloud_range)
         ]),
-    dict(type='Pack3DDetInputs', keys=['points', 'img'])
-]
-# construct a pipeline for data and gt loading in show function
-# please keep its loading function consistent with test_pipeline (e.g. client)
+    dict(
+        type='Pack3DDetInputs',
+        keys=[
+            'points', 'img'
+        ])]
+
 eval_pipeline = [
     dict(
         type='LoadPointsFromFile',
         coord_type='LIDAR',
         load_dim=4,
         use_dim=4,
-        backend_args=backend_args),
-    dict(type='Pack3DDetInputs', keys=['points', 'img'])
-]
+        backend_args=default_backend_args),
+    dict(
+        type='Pack3DDetInputs',
+        keys=[
+            'points', 'img'
+        ])]
+
+
+
+
+
+
+'''
+######################################### DATALOADERS ##########################################
+'''
+
 train_dataloader = dict(
     batch_size=1,
     num_workers=1,
@@ -124,12 +166,14 @@ train_dataloader = dict(
             type=dataset_type,
             data_root=data_root,
             modality=input_modality,
-            ann_file='kitti_infos_train.pkl',
-            data_prefix=dict(pts='training/velodyne_reduced', img="training/image_2"),
+            ann_file='minerva_polimove_infos_train.pkl',
+            data_prefix=dict(pts='training/velodyne', img="training/image_2"),
             pipeline=train_pipeline,
             metainfo=metainfo,
             box_type_3d='LiDAR',
-            backend_args=backend_args)))
+            backend_args=default_backend_args
+        )))
+
 val_dataloader = dict(
     batch_size=1,
     num_workers=1,
@@ -139,14 +183,16 @@ val_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        data_prefix=dict(pts='training/velodyne_reduced', img="training/image_2"),
-        ann_file='kitti_infos_val.pkl',
+        data_prefix=dict(pts='training/velodyne', img="training/image_2"),
+        ann_file='minerva_polimove_infos_val.pkl',
         pipeline=test_pipeline,
         modality=input_modality,
         test_mode=True,
         metainfo=metainfo,
         box_type_3d='LiDAR',
-        backend_args=backend_args))
+        backend_args=default_backend_args
+    ))
+
 test_dataloader = dict(
     batch_size=1,
     num_workers=1,
@@ -156,20 +202,39 @@ test_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        data_prefix=dict(pts='training/velodyne_reduced', img="training/image_2"),
-        ann_file='kitti_infos_val.pkl',
+        data_prefix=dict(pts='training/velodyne', img="training/image_2"),
+        ann_file='minerva_polimove_infos_val.pkl',
         pipeline=test_pipeline,
         modality=input_modality,
         test_mode=True,
         metainfo=metainfo,
         box_type_3d='LiDAR',
-        backend_args=backend_args))
+        backend_args=default_backend_args))
+
+
+
+
+
+
+'''
+######################################### EVALUATORS ##########################################
+'''
+
 val_evaluator = dict(
-    type='KittiMetric',
-    ann_file=data_root + 'kitti_infos_val.pkl',
-    metric='bbox',
-    backend_args=backend_args)
+    type='MinervaMetric',
+    ann_file=data_root + 'minerva_polimove_infos_val.pkl',
+    metric='bbox'
+)
 test_evaluator = val_evaluator
+
+
+
+
+
+
+'''
+######################################### VISUALIZATION ##########################################
+'''
 
 vis_backends = [dict(type='LocalVisBackend')]
 visualizer = dict(

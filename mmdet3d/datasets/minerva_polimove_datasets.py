@@ -123,7 +123,7 @@ class MinervaCameraLidarDataset(Det3DDataset):
                  ann_file: str,
                  pipeline: List[Union[dict, Callable]] = [],
                  modality: dict = dict(use_lidar=True, use_camera=True),
-                 default_cam_key: str = 'CAM2',
+                 default_cam_key: str = 'CAM0',
                  load_type: str = 'frame_based',
                  box_type_3d: str = 'LiDAR',
                  filter_empty_gt: bool = True,
