@@ -161,13 +161,13 @@ train_dataloader = dict(
     sampler=dict(type='DefaultSampler', shuffle=True),
     dataset=dict(
         type='RepeatDataset',
-        times=2,
+        times=1,
         dataset=dict(
             type=dataset_type,
             data_root=data_root,
             modality=input_modality,
             ann_file='minerva_polimove_infos_train.pkl',
-            data_prefix=dict(pts='training/velodyne', img="training/image_2"),
+            data_prefix=dict(pts='training/velodyne_reduced', img="training/image_2"),
             pipeline=train_pipeline,
             metainfo=metainfo,
             box_type_3d='LiDAR',
@@ -183,7 +183,7 @@ val_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        data_prefix=dict(pts='training/velodyne', img="training/image_2"),
+        data_prefix=dict(pts='training/velodyne_reduced', img="training/image_2"),
         ann_file='minerva_polimove_infos_val.pkl',
         pipeline=test_pipeline,
         modality=input_modality,
@@ -202,7 +202,7 @@ test_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        data_prefix=dict(pts='training/velodyne', img="training/image_2"),
+        data_prefix=dict(pts='training/velodyne_reduced', img="training/image_2"),
         ann_file='minerva_polimove_infos_val.pkl',
         pipeline=test_pipeline,
         modality=input_modality,
