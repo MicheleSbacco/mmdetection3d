@@ -11,7 +11,7 @@ from .waymo_metric import WaymoMetric  # noqa: F401,F403
 
 
 # Adding import for Minerva Polimove
-from .minerva_metric import MinervaMetric
+from .minerva_metric import MinervaMetricLidar, MinervaMetricFusion
 
 
 
@@ -19,5 +19,5 @@ __all__ = [
     'KittiMetric', 'NuScenesMetric', 'IndoorMetric', 'LyftMetric', 'SegMetric',
     'InstanceSegMetric', 'WaymoMetric', 'PanopticSegMetric',
     # Adding custom metric for Minerva Polimove
-    'MinervaMetric'
+    'MinervaMetricLidar', 'MinervaMetricFusion'
 ]

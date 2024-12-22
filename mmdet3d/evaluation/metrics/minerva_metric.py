@@ -63,7 +63,7 @@ from demo.utils import group_training_dictionaries
 
 
 @METRICS.register_module()
-class MinervaMetric(BaseMetric):
+class MinervaMetricLidar(BaseMetric):
     """Kitti evaluation metric.
 
     Args:
@@ -128,7 +128,7 @@ class MinervaMetric(BaseMetric):
                  
                  ) -> None:
         self.default_prefix = 'Minerva'
-        super(MinervaMetric, self).__init__(
+        super(MinervaMetricLidar, self).__init__(
             collect_device=collect_device, prefix=prefix)
         self.pcd_limit_range = pcd_limit_range
         self.ann_file = ann_file
@@ -516,3 +516,17 @@ class MinervaMetric(BaseMetric):
 
         ap40 /= len(recall_levels)
         return ap40
+
+
+
+
+
+
+@METRICS.register_module()
+class MinervaMetricFusion(BaseMetric):
+    def init(*args):
+        pass
+    def process(self, data_batch: dict, data_samples: Sequence[dict]) -> None:
+        pass
+    def compute_metrics(self, results: List[dict]) -> Dict[str, float]:
+        pass

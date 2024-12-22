@@ -1,38 +1,8 @@
-_base_ = ['../_base_/schedules/cosine.py', '../_base_/custom_runtime_fusion.py', '../_base_/datasets/minerva_camera_lidar_dataset.py']
+_base_ = ['../_base_/schedules/cosine.py', '../_base_/default_runtime.py']
 
-# model settings --> ORIGINAL
+# model settings
 voxel_size = [0.05, 0.05, 0.1]
 point_cloud_range = [0, -40, -3, 70.4, 40, 1]
-sparse_shape_default=[41, 1600, 1408]
-#
-# ------------> "sparse_shape_default" and "SparseEncoder-->output_channels" was wrong and was 
-#               causing mistakes. Explanation follows
-#           ------> If you put sparse_shape[z_value]=41 (it should be =40) then you get double 
-#                   the output_channels in SparseEncoder (which is default=128 while second 
-#                   has input=256)
-#           ------> So what is needed to do is to select the right sparse_shape[z_value] and
-#                   explicitate the output value of SparseEncoder to output_channels=256
-#
-# ------------> "sparse_shape_default" must have a specific property or will get mistakes. The
-#               explanation follows 
-#           ------> The dimensions y and x must be dividable by 2 for 4 times (essentially by 
-#                   16). So for example 600 is not ok (600/8=75 so not further dividable by 2)
-#                   while 1200 is ok (1200/8=150 dividable by 2)
-#           ------> This is because the pointcloud canvas is processed with a convolution by
-#                   "sparse_block.py-->make_sparse_convmodule" inside SparseEncoder that has 
-#                   a kernel=3 which means that the canvas's dimensions are diminished of 
-#                   2^3=8. When the canvas is then processed by SECONDFPN it is further 
-#                   divided by 2, which causes some problems when the re-upsampling then 
-#                   happens (normal version has y=75 and downsampled has y=38, but then 
-#                   38*2=76)
-#
-# model settings --> MODIFIED
-voxel_size = [0.1, 0.1, 0.2]
-point_cloud_range = [0, -28, -4, 120, 28, 3]
-sparse_shape_default=[
-    int((point_cloud_range[5]-point_cloud_range[2])/voxel_size[2]),     # z dimension
-    int((point_cloud_range[4]-point_cloud_range[1])/voxel_size[1]),     # y dimension
-    int((point_cloud_range[3]-point_cloud_range[0])/voxel_size[0])]     # x dimension
 
 model = dict(
     type='DynamicMVXFasterRCNN',
@@ -87,8 +57,7 @@ model = dict(
     pts_middle_encoder=dict(
         type='SparseEncoder',
         in_channels=128,
-        output_channels=256,
-        sparse_shape=sparse_shape_default,
+        sparse_shape=[41, 1600, 1408],
         order=('conv', 'norm', 'act')),
     pts_backbone=dict(
         type='SECOND',
@@ -103,18 +72,18 @@ model = dict(
         out_channels=[256, 256]),
     pts_bbox_head=dict(
         type='Anchor3DHead',
-        num_classes=1,
+        num_classes=3,
         in_channels=512,
         feat_channels=512,
         use_direction_classifier=True,
         anchor_generator=dict(
             type='Anchor3DRangeGenerator',
             ranges=[
-                [0, -30, -1, 120, 30, -1],
+                [0, -40.0, -0.6, 70.4, 40.0, -0.6],
+                [0, -40.0, -0.6, 70.4, 40.0, -0.6],
+                [0, -40.0, -1.78, 70.4, 40.0, -1.78],
             ],
-            sizes=[
-                [5.0, 2.0, 1.5]
-            ],
+            sizes=[[0.8, 0.6, 1.73], [1.76, 0.6, 1.73], [3.9, 1.6, 1.56]],
             rotations=[0, 1.57],
             reshape_out=False),
         assigner_per_size=True,
@@ -136,6 +105,20 @@ model = dict(
     train_cfg=dict(
         pts=dict(
             assigner=[
+                dict(  # for Pedestrian
+                    type='Max3DIoUAssigner',
+                    iou_calculator=dict(type='BboxOverlapsNearest3D'),
+                    pos_iou_thr=0.35,
+                    neg_iou_thr=0.2,
+                    min_pos_iou=0.2,
+                    ignore_iof_thr=-1),
+                dict(  # for Cyclist
+                    type='Max3DIoUAssigner',
+                    iou_calculator=dict(type='BboxOverlapsNearest3D'),
+                    pos_iou_thr=0.35,
+                    neg_iou_thr=0.2,
+                    min_pos_iou=0.2,
+                    ignore_iof_thr=-1),
                 dict(  # for Car
                     type='Max3DIoUAssigner',
                     iou_calculator=dict(type='BboxOverlapsNearest3D'),
@@ -157,14 +140,134 @@ model = dict(
             nms_pre=100,
             max_num=50)))
 
-train_cfg = dict(max_epochs=30, val_interval=1)
+# dataset settings
+dataset_type = 'KittiDataset'
+data_root = 'data/kitti/'
+class_names = ['Pedestrian', 'Cyclist', 'Car']
+metainfo = dict(classes=class_names)
+input_modality = dict(use_lidar=True, use_camera=True)
+backend_args = None
+train_pipeline = [
+    dict(
+        type='LoadPointsFromFile',
+        coord_type='LIDAR',
+        load_dim=4,
+        use_dim=4,
+        backend_args=backend_args),
+    dict(type='LoadImageFromFile', backend_args=backend_args),
+    dict(type='LoadAnnotations3D', with_bbox_3d=True, with_label_3d=True),
+    dict(
+        type='RandomResize', scale=[(640, 192), (2560, 768)], keep_ratio=True),
+    dict(
+        type='GlobalRotScaleTrans',
+        rot_range=[-0.78539816, 0.78539816],
+        scale_ratio_range=[0.95, 1.05],
+        translation_std=[0.2, 0.2, 0.2]),
+    dict(type='RandomFlip3D', flip_ratio_bev_horizontal=0.5),
+    dict(type='PointsRangeFilter', point_cloud_range=point_cloud_range),
+    dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range),
+    dict(type='PointShuffle'),
+    dict(
+        type='Pack3DDetInputs',
+        keys=[
+            'points', 'img', 'gt_bboxes_3d', 'gt_labels_3d', 'gt_bboxes',
+            'gt_labels'
+        ])
+]
+test_pipeline = [
+    dict(
+        type='LoadPointsFromFile',
+        coord_type='LIDAR',
+        load_dim=4,
+        use_dim=4,
+        backend_args=backend_args),
+    dict(type='LoadImageFromFile', backend_args=backend_args),
+    dict(
+        type='MultiScaleFlipAug3D',
+        img_scale=(1280, 384),
+        pts_scale_ratio=1,
+        flip=False,
+        transforms=[
+            # Temporary solution, fix this after refactor the augtest
+            dict(type='Resize', scale=0, keep_ratio=True),
+            dict(
+                type='GlobalRotScaleTrans',
+                rot_range=[0, 0],
+                scale_ratio_range=[1., 1.],
+                translation_std=[0, 0, 0]),
+            dict(type='RandomFlip3D'),
+            dict(
+                type='PointsRangeFilter', point_cloud_range=point_cloud_range),
+        ]),
+    dict(type='Pack3DDetInputs', keys=['points', 'img'])
+]
+modality = dict(use_lidar=True, use_camera=True)
+train_dataloader = dict(
+    batch_size=2,
+    num_workers=2,
+    sampler=dict(type='DefaultSampler', shuffle=True),
+    dataset=dict(
+        type='RepeatDataset',
+        times=2,
+        dataset=dict(
+            type=dataset_type,
+            data_root=data_root,
+            modality=modality,
+            ann_file='kitti_infos_train.pkl',
+            data_prefix=dict(
+                pts='training/velodyne_reduced', img='training/image_2'),
+            pipeline=train_pipeline,
+            filter_empty_gt=False,
+            metainfo=metainfo,
+            # we use box_type_3d='LiDAR' in kitti and nuscenes dataset
+            # and box_type_3d='Depth' in sunrgbd and scannet dataset.
+            box_type_3d='LiDAR',
+            backend_args=backend_args)))
+
+val_dataloader = dict(
+    batch_size=1,
+    num_workers=1,
+    sampler=dict(type='DefaultSampler', shuffle=False),
+    dataset=dict(
+        type=dataset_type,
+        data_root=data_root,
+        modality=modality,
+        ann_file='kitti_infos_val.pkl',
+        data_prefix=dict(
+            pts='training/velodyne_reduced', img='training/image_2'),
+        pipeline=test_pipeline,
+        metainfo=metainfo,
+        test_mode=True,
+        box_type_3d='LiDAR',
+        backend_args=backend_args))
+test_dataloader = dict(
+    batch_size=1,
+    num_workers=1,
+    sampler=dict(type='DefaultSampler', shuffle=False),
+    dataset=dict(
+        type=dataset_type,
+        data_root=data_root,
+        ann_file='kitti_infos_val.pkl',
+        modality=modality,
+        data_prefix=dict(
+            pts='training/velodyne_reduced', img='training/image_2'),
+        pipeline=test_pipeline,
+        metainfo=metainfo,
+        test_mode=True,
+        box_type_3d='LiDAR',
+        backend_args=backend_args))
 
 optim_wrapper = dict(
     optimizer=dict(weight_decay=0.01),
     clip_grad=dict(max_norm=35, norm_type=2),
 )
+val_evaluator = dict(
+    type='KittiMetric', ann_file='data/kitti/kitti_infos_val.pkl')
+test_evaluator = val_evaluator
+
+vis_backends = [dict(type='LocalVisBackend')]
+visualizer = dict(
+    type='Det3DLocalVisualizer', vis_backends=vis_backends, name='visualizer')
 
 # You may need to download the model first is the network is unstable
-# load_from = 'https://download.openmmlab.com/mmdetection3d/pretrain_models/mvx_faster_rcnn_detectron2-caffe_20e_coco-pretrain_gt-sample_kitti-3-class_moderate-79.3_20200207-a4a6a3c7.pth'  # noqa
-
-resume = False
+load_from = 'https://download.openmmlab.com/mmdetection3d/pretrain_models/mvx_faster_rcnn_detectron2-caffe_20e_coco-pretrain_gt-sample_kitti-3-class_moderate-79.3_20200207-a4a6a3c7.pth'  # noqa

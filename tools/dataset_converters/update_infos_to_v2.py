@@ -493,14 +493,13 @@ def update_minerva_polimove_infos(pkl_path, out_dir, use_images):
         # NOTE:
         #   - Here we just consider the important matrices as we have done in the file called 
         #     "minerva_polimove_data_utils.py" (look for the words "calib" dictionary)
-        #   - We will transform all "CAM2" names in "CAM0"
         if use_images:                                                                      ## Used the "use_images" boolean here
-            temp_data_info['images']['CAM0']['cam2img'] = ori_info_dict['calib'][
+            temp_data_info['images']['CAM2']['cam2img'] = ori_info_dict['calib'][
                 'P0'].tolist()
-            temp_data_info['images']['CAM0']['img_path'] = Path(ori_info_dict['image']['image_path']).name
+            temp_data_info['images']['CAM2']['img_path'] = Path(ori_info_dict['image']['image_path']).name
             h, w = ori_info_dict['image']['image_shape']
-            temp_data_info['images']['CAM0']['height'] = h
-            temp_data_info['images']['CAM0']['width'] = w
+            temp_data_info['images']['CAM2']['height'] = h
+            temp_data_info['images']['CAM2']['width'] = w
 
         # Assign the lidar path and number of features.
         temp_data_info['lidar_points']['num_pts_feats'] = ori_info_dict['point_cloud']['num_features']
@@ -509,12 +508,12 @@ def update_minerva_polimove_infos(pkl_path, out_dir, use_images):
         # Assign other "calib" infos
         if use_images:                                                                                          ## Used the "use_images" boolean here
             Trv2c = ori_info_dict['calib']['Tr_velo_to_cam'].astype(np.float32)
-            temp_data_info['images']['CAM0']['lidar2cam'] = Trv2c.tolist()
+            temp_data_info['images']['CAM2']['lidar2cam'] = Trv2c.tolist()
             temp_data_info['lidar_points']['Tr_velo_to_cam'] = Trv2c.tolist()
             
-            temp_data_info['images']['CAM0']['lidar2img'] = (
+            temp_data_info['images']['CAM2']['lidar2img'] = (
                 ori_info_dict['calib']['P0'] @ Trv2c).tolist()
-            lidar2img = temp_data_info['images']['CAM0']['lidar2img']   # TODO: Check here if it is correct, has been modified (because my
+            lidar2img = temp_data_info['images']['CAM2']['lidar2img']   # TODO: Check here if it is correct, has been modified (because my
                                                                         #       [localization, dimensions] coordinates are not in the camera
                                                                         #       frame but in the lidar frame)
 
@@ -602,14 +601,14 @@ def update_minerva_polimove_infos(pkl_path, out_dir, use_images):
             #      |
             #      V
             if use_images:                                                                              ## Used the "use_images" boolean here
-                # Create the main dictionary with the "CAM0" list
-                temp_data_info['cam_instances'] = {'CAM0': []}
+                # Create the main dictionary with the "CAM2" list
+                temp_data_info['cam_instances'] = {'CAM2': []}
                 # Go through the instances in "temp_data_info['instances']" 
                 for instance in temp_data_info['instances']:
                     # Just add them if the bbox label is different from "-1" (which would mean that the label is 'DontCare')
                     if str(instance['bbox_label']) != str(-1):
                         # Append to the list a dictionary with the right fields and values
-                        temp_data_info['cam_instances']['CAM0'].append({
+                        temp_data_info['cam_instances']['CAM2'].append({
                             'bbox_label': instance['bbox_label'],
                             'bbox_label_3d': instance['bbox_label'],
                             'bbox': instance['bbox'],

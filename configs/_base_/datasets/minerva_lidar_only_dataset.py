@@ -239,7 +239,7 @@ test_dataloader = dict(
 
 # TODO: Will need to modify here...
 val_evaluator = dict(
-    type='MinervaMetric',
+    type='MinervaMetricLidar',
     ann_file=data_root + 'minerva_polimove_infos_val.pkl',
     metric='bbox'
 )

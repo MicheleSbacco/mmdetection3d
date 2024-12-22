@@ -367,7 +367,7 @@ test_evaluator = dict(
     save_losses_on_file = True,
     losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json",
     reduced_x_limit = [-40, 80],
-    type='MinervaMetric')
+    type='MinervaMetricLidar')
 test_pipeline = [
     dict(coord_type='LIDAR', load_dim=4, type='LoadPointsFromFile', use_dim=4),
     dict(
@@ -638,7 +638,7 @@ val_evaluator = dict(
     save_losses_on_file = True,
     losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json",
     reduced_x_limit = [-40, 80],
-    type='MinervaMetric')
+    type='MinervaMetricLidar')
 vis_backends = [
     dict(type='LocalVisBackend'),
 ]

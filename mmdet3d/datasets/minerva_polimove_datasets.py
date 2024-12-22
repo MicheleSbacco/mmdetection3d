@@ -123,7 +123,7 @@ class MinervaCameraLidarDataset(Det3DDataset):
                  ann_file: str,
                  pipeline: List[Union[dict, Callable]] = [],
                  modality: dict = dict(use_lidar=True, use_camera=True),
-                 default_cam_key: str = 'CAM0',
+                 default_cam_key: str = 'CAM2',
                  load_type: str = 'frame_based',
                  box_type_3d: str = 'LiDAR',
                  filter_empty_gt: bool = True,
@@ -179,7 +179,7 @@ class MinervaCameraLidarDataset(Det3DDataset):
         # This line is probably NOT needed because KITTI_dataset used it for the conversion to CameraInstance3DBoxes, but
         # we directly use the lidar...
         # TODO: check this assumption is correct
-        lidar2cam = np.array(info['images']['CAM0']['lidar2cam'])
+        lidar2cam = np.array(info['images']['CAM2']['lidar2cam'])
         
         # ATTENTION: Here below the type of box is defined. This part is really important to make the overall dataset work.
         #       - More information about the conventions on frames etc. can be found in the files that
