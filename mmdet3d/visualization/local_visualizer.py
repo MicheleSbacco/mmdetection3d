@@ -853,6 +853,22 @@ class Det3DLocalVisualizer(DetLocalVisualizer):
                                  continue_key)
             else:
                 if vis_task == 'multi-modality_det':
+                    
+                    # NOTE:
+                    #   - May have problems here if the "is_inline" is True (means that the
+                    #     image (the one with pixels, not the pointcloud) is to be visualized 
+                    #     statically in the output log, instead of being visualized in a 
+                    #     different window). 
+                    #   - Especially if starting script is Python Notebook and not a normal
+                    #     Python script
+                    #   - What needs to be done is to 
+                    #       import matplotlib
+                    #       matplotlib.use('QtAgg')
+                    #       import matplotlib.pyplot as plt
+                    #     in Python Notebook and everything ok.
+                    #   - If want to check, need to print(plt.get_backend()) and verify that
+                    #     it is "QtAgg"
+                    
                     import matplotlib.pyplot as plt
                     is_inline = 'inline' in plt.get_backend()
                     img = drawn_img if drawn_img_3d is None else drawn_img_3d

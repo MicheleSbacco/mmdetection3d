@@ -51,7 +51,8 @@ class MultiModalityDet3DInferencer(Base3DInferencer):
                  weights: Optional[str] = None,
                  device: Optional[str] = None,
                  scope: str = 'mmdet3d',
-                 palette: str = 'none') -> None:
+                 palette: str = 'none',
+                 show_progress: bool = False) -> None:                      # Added parameter to remove visualization of progress
         # A global counter tracking the number of frames processed, for
         # naming of the output results
         self.num_visualized_frames = 0
@@ -60,7 +61,8 @@ class MultiModalityDet3DInferencer(Base3DInferencer):
             weights=weights,
             device=device,
             scope=scope,
-            palette=palette)
+            palette=palette,
+            show_progress=show_progress)                                    # Added parameter to remove visualization of progress
 
     def _inputs_to_list(self,
                         inputs: Union[dict, list],
@@ -111,6 +113,36 @@ class MultiModalityDet3DInferencer(Base3DInferencer):
 
             # get cam2img, lidar2cam and lidar2img from infos
             info_list = mmengine.load(infos)['data_list']
+
+
+
+
+
+
+            ###################################################################################
+            ###################################################################################
+            #######                                                                     #######
+            #######     ADDED PART TO MAKE THE INFERENCER PROCESS THE DATA IN MY WAY    #######
+            #######                                                                     #######
+            ###################################################################################
+            ###################################################################################
+
+            # Take the timestamp from the field "inputs"
+            timestamp = inputs[0]['points'].split('/')[-1].split('.')[0]
+
+            # Filter the list so that only the "right" timestamp is kept
+            new_info_list = []
+            for element in info_list:
+                if str(element['sample_idx']) == str(timestamp):
+                    new_info_list.append(element)
+            # Update the field "info_list"    
+            info_list = new_info_list
+
+
+
+
+
+
             assert len(info_list) == len(inputs)
             for index, input in enumerate(inputs):
                 data_info = info_list[index]
