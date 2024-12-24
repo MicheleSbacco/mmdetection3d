@@ -82,6 +82,22 @@ class SparseEncoder(nn.Module):
         assert isinstance(order, tuple) and len(order) == 3
         assert set(order) == {'conv', 'norm', 'act'}
 
+
+
+        # Description of the arguments of the "make_sparse_convmodule" function from "mmdet3d/models/layers/sparse_block.py"
+        # 
+        # in_channels               [Mandatory]
+        # out_channels              [Mandatory]
+        # kernel_size               [Mandatory]
+        # indice_key = None,                [Optional]
+        # stride = 1,                       [Optional]
+        # padding = 0,                      [Optional]
+        # conv_type = 'SubMConv3d',         [Optional]
+        # norm_cfg = None,                  [Optional]
+        # order = ('conv', 'norm', 'act'),  [Optional]
+
+
+
         if self.order[0] != 'conv':  # pre activate
             self.conv_input = make_sparse_convmodule(
                 in_channels,
@@ -108,15 +124,43 @@ class SparseEncoder(nn.Module):
             self.base_channels,
             block_type=block_type)
 
+
+
+        # This part has been modified to dynamically adapt to the sparse_shape parameter
+        # 
+        #   - In conv_out the 3D-grid is convolutionally collapsed along the z dimension, while
+        #     the y and x directions are still convoluted but not collapsed.
+        #   - This is done by using a kernel (n, 1, 1) so that the z dimension is collapsed. But
+        #     if the z-shape is bigger than the one thought by the authors, then the fixed-size
+        #     kernel does not effectively collapse the z-direction but it only reduces it.
+        #   - This results in a double (or even triple etc.) number of features than expected, in 
+        #     turn causing errors in the NN module right after the SparseEncoder
+        
+        # Explanation
+        #   - We need the parameter "third_halfing" to dinamically adapt the kernel size to the
+        #     z-dimension of the voxelization grid.
+        #   - The numbers "first_halfing", "second_halfing" and "third_halfing" simulate the
+        #     convolution process that happens in the middle layers (created just above here
+        #     by "make_encoder_layers"). They have stride=2 so the dimensions are halved at
+        #     each step
+
+        first_halfing = int(sparse_shape[0]/2)
+        second_halfing = int(first_halfing/2)
+        third_halfing = int(second_halfing/2)
+        
         self.conv_out = make_sparse_convmodule(
             encoder_out_channels,
             self.output_channels,
-            kernel_size=(3, 1, 1),
-            stride=(2, 1, 1),
+            kernel_size=(third_halfing, 1, 1),
+            # stride=(2, 1, 1),                 # Not needed, does not make sense since we need a
+                                                # complete compression of the z-axis. Default value
+                                                # is 1 and is ok. 
             norm_cfg=norm_cfg,
             padding=0,
             indice_key='spconv_down2',
             conv_type='SparseConv3d')
+
+
 
     @amp.autocast(enabled=False)
     def forward(self, voxel_features: Tensor, coors: Tensor,

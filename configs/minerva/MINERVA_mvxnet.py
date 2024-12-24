@@ -15,20 +15,28 @@ sparse_shape_default=[41, 1600, 1408]
 #
 # ------------> "sparse_shape_default" must have a specific property or will get mistakes. The
 #               explanation follows 
-#           ------> The dimensions y and x must be dividable by 2 for 4 times (essentially by 
-#                   16). So for example 600 is not ok (600/8=75 so not further dividable by 2)
-#                   while 1200 is ok (1200/8=150 dividable by 2)
-#           ------> This is because the pointcloud canvas is processed with a convolution by
-#                   "sparse_block.py-->make_sparse_convmodule" inside SparseEncoder that has 
-#                   a kernel=3 which means that the canvas's dimensions are diminished of 
-#                   2^3=8. When the canvas is then processed by SECONDFPN it is further 
-#                   divided by 2, which causes some problems when the re-upsampling then 
-#                   happens (normal version has y=75 and downsampled has y=38, but then 
-#                   38*2=76)
+#           ------> The dimensions y,x must be dividable by 2 for 4 times (essentially by 16).
+#                   So for example 600 is not ok (600/8=75 so not further dividable by 2) while
+#                   1200 is ok (1200/8=150 dividable by 2)
+#           ------> This is because the pointcloud canvas is processed with a three-fold convolution by 
+#                   "(make_encoder_layers/sparse_encoder.py) -> (make_sparse_convmodule/sparse_block.py)"
+#                   that has stride=2. This means that the canvas's dimensions are diminished of 2^3=8
+#                   along all of these directions.
+#           ------> When the canvas is then processed by SECONDFPN it is further divided by 2, which can 
+#                   cause some problems when the re-upsampling happens (example: normal version has y=75
+#                   and downsampled has y=38, but then 38*2=76)
+#
+# ------------> For the z, this problem is actually absorbed by the collapsing along the z direction. But
+#               since the code is not really well done, it is desirable that the number of voxels in the
+#               z-direction is "slightly" superior to be divided by 8.
+#               For example, if 64 is the desired number of voxels (can be divided by 8) then make it a 
+#               bit higher (like 65 or 66).
+#           ------> Sometimes there may be little issues, like if z-grid=32 then must make it
+#                   34 or it doesn't work (not even with 33)
 #
 # model settings --> MODIFIED
-voxel_size = [0.1, 0.1, 0.2]
-point_cloud_range = [0, -28, -4, 120, 28, 3]
+voxel_size = [0.05, 0.05, 0.2]
+point_cloud_range = [0, -28, -2, 120, 28, 4.8]
 sparse_shape_default=[
     int((point_cloud_range[5]-point_cloud_range[2])/voxel_size[2]),     # z dimension
     int((point_cloud_range[4]-point_cloud_range[1])/voxel_size[1]),     # y dimension
