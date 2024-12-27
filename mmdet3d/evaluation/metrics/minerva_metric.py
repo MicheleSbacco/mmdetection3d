@@ -53,12 +53,17 @@ from mmdet3d.structures import (Box3DMode, CameraInstance3DBoxes,
 from mmdet3d.structures.ops.iou3d_calculator import BboxOverlaps3D
 # Added import for the computation of losses with the Inferencer
 from mmdet3d.apis import LidarDet3DInferencer
+from mmdet3d.apis import MultiModalityDet3DInferencer
 # Added import for the proper type transformation of the gt_bboxes
 from mmengine.structures import InstanceData
 # Added import for the tracing of losses
 from demo.json_handler import JSONHandler
 # Added import for the "grouping" of training dictionaries
 from demo.utils import group_training_dictionaries
+
+# Added imports for the removal of unnecessary checkpoints
+import os
+import re
 
 
 
@@ -127,7 +132,7 @@ class MinervaMetricLidar(BaseMetric):
                             #####################################################
                  
                  ) -> None:
-        self.default_prefix = 'Minerva'
+        self.default_prefix = 'MinervaLidarOnly'
         super(MinervaMetricLidar, self).__init__(
             collect_device=collect_device, prefix=prefix)
         self.pcd_limit_range = pcd_limit_range
@@ -522,11 +527,433 @@ class MinervaMetricLidar(BaseMetric):
 
 
 
+
+
+
+
+
+
+'''
+#####################################################################################################
+#####################################################################################################
+#####                                                                                           #####
+#####   This function has been copied from the LiDAR-only version (above) and the re-adapted    #####
+#####   to satisfy the needs of an early-fusion environment                                     #####
+#####                                                                                           #####
+#####################################################################################################
+#####################################################################################################
+'''
+
 @METRICS.register_module()
 class MinervaMetricFusion(BaseMetric):
-    def init(*args):
-        pass
+    def __init__(self,
+                 ann_file: str,
+                 metric: Union[str, List[str]] = 'bbox',
+                 pcd_limit_range: List[float] = [0, -40, -3, 70.4, 40, 0.0],
+                 prefix: Optional[str] = None,
+                 pklfile_prefix: Optional[str] = None,
+                 default_cam_key: str = 'CAM2',
+                 format_only: bool = False,
+                 submission_prefix: Optional[str] = None,
+                 collect_device: str = 'cpu',
+                 backend_args: Optional[dict] = None,
+                 lidar_path_prefix = '/home/michele/code/michele_mmdet3d/',     # Added argument to initialize the inferencer's input
+                 model_path =                                                   # Added argument to the desired model config 
+                 '/home/michele/code/michele_mmdet3d/configs/minerva/CONDENSED_pointpillars_minerva.py',
+                 last_chkpt_file_path =                                         # Added argument for the checkpoint update
+                 '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint',
+                 save_losses_on_file = False,                                   # Added argument to save the losses on a .json file
+                 losses_file_destination_path = None,                           # Added argument to save the losses on a .json file
+                 reduced_x_limit = [-40, 80],                                   # To count less false negatives (when gt_bbox is too far)
+                 
+                 delete_checkpoints = False,            # Added to delete checkpoints if too
+                 checkpoints_folder = None,             # Added to delete checkpoints if too big
+                 save_checkpoints_one_every_n = None    # Added to delete checkpoints if too big
+
+                            #####################################################
+                            ##                                                 ##
+                            ##  Just for clarity: the "val_evaluator" config   ##
+                            ##  is used for the validation cycle (so NOT the   ##
+                            ##  "test_evaluator" config.                       ##
+                            ##                                                 ##
+                            #####################################################
+                 
+                 ) -> None:
+        self.default_prefix = 'MinervaFusion'
+        super(MinervaMetricFusion, self).__init__(
+            collect_device=collect_device, prefix=prefix)
+        self.pcd_limit_range = pcd_limit_range
+        self.ann_file = ann_file
+        self.pklfile_prefix = pklfile_prefix
+        self.format_only = format_only
+        if self.format_only:
+            assert submission_prefix is not None, 'submission_prefix must be '
+            'not None when format_only is True, otherwise the result files '
+            'will be saved to a temp directory which will be cleaned up at '
+            'the end.'
+
+        self.submission_prefix = submission_prefix
+        self.default_cam_key = default_cam_key
+        self.backend_args = backend_args
+
+        allowed_metrics = ['bbox', 'img_bbox', 'mAP', 'LET_mAP']
+        self.metrics = metric if isinstance(metric, list) else [metric]
+        for metric in self.metrics:
+            if metric not in allowed_metrics:
+                raise KeyError("metric should be one of 'bbox', 'img_bbox', "
+                               f'but got {metric}.')
+        
+        # Initialize self.results to avoid receiving a warning from the parent class "BaseMetric"
+        self.results = [{}]
+        # Initialize the variable that will contain the bboxes for the evaluation of the AP40
+        self.bboxes = []
+        # Initialize the IoU thresholds for the computation of true positives, false positives and
+        # false negatives.
+        self.start_iou = 0.10
+        self.end_iou = 0.90
+        self.interval_iou = 0.025
+        self.iou_threshold_list = np.linspace(self.start_iou, self.end_iou, round((self.end_iou-self.start_iou)/self.interval_iou)+1)
+        # Initialize the type of bbox
+        self.box_type = 'lidar'
+        # Boolean that will be used to initialize the inferencer at each validation cycle, and other parameters for the inferencer
+        self.inferencer_needs_update = True
+        self.inferencer = None
+        self.lidar_path_prefix = lidar_path_prefix
+        self.model_path = model_path
+        self.last_chkpt_file_path = last_chkpt_file_path
+        # Added initialization to save losses on a .json file
+        self.save_losses_on_file = save_losses_on_file
+        if self.save_losses_on_file:
+            if losses_file_destination_path == None:
+                print("\n\n###########################################\
+                      \n#    Losses destination file is None!!    #\
+                      \n###########################################\n\n")
+                exit()
+            self.handler = JSONHandler(losses_file_destination_path)
+        # Added parameter for the reduction in the count of false negatives
+        self.reduced_x_limit = reduced_x_limit
+
+        # Add removal of checkpoints if needed
+        self.delete_checkpoints = delete_checkpoints
+        if self.delete_checkpoints:
+            self.checkpoints_folder = checkpoints_folder
+            self.save_checkpoints_one_every_n = save_checkpoints_one_every_n
+
+
+
+
+
+
+    # Description of the function in MinervaMetricLidar
     def process(self, data_batch: dict, data_samples: Sequence[dict]) -> None:
-        pass
+        """Process one batch of data samples and predictions.
+
+        The processed results should be stored in ``self.results``, which will
+        be used to compute the metrics when all batches have been processed.
+
+        Args:
+            data_batch (dict): A batch of data from the dataloader.
+            data_samples (Sequence[dict]): A batch of outputs from the model.
+        """
+
+
+
+        ############################### INITIALIZE INFERENCER ###############################
+        if self.inferencer_needs_update:
+            # Read the path to the most recent weights
+            with open(self.last_chkpt_file_path, 'r') as file:
+                weights_path = file.readline().strip()
+            # Initialize the inferencer
+            self.inferencer = MultiModalityDet3DInferencer(model=self.model_path,
+                                                           weights=weights_path,
+                                                           want_losses=True,
+                                                           show_progress = False)
+            # Set the boolean back to false
+            self.inferencer_needs_update = False
+
+
+
+        ##################################### NEW PART #####################################
+        # Just process the first element (not found cases when there are more than just one element)
+        data_sample = data_samples[0]
+        # Create the dictionary and update all of its values
+        new_dictionary = {}
+        new_dictionary['sample_idx'] = data_sample['sample_idx']
+        new_dictionary['timestamp'] = str(data_sample['lidar_path']).split('/')[-1].split('.bin')[0]
+        new_dictionary['pred_bboxes'] = data_sample['pred_instances_3d']['bboxes_3d'].tensor
+        new_dictionary['pred_scores'] = data_sample['pred_instances_3d']['scores_3d']
+        # NOTE: Pay ATTENTION already corrected
+        #   - Had problems before with the following line (slight changes in dataloaders)
+        #   - See MinervaMetricLidar to understand
+        new_dictionary['gt_bboxes'] = data_sample['eval_ann_info']['gt_bboxes_3d'].tensor
+
+
+
+        ##################################### NEW PART FOR LOSSES #####################################
+        # Create an object of type "InstanceData"
+        #   - Needed to match the type of data for the inferencer
+        #   - Contains information about the ground truth bounding boxes (gt_bboxes)
+        #   - Will then be passed to the inferencer as an argument for the call
+        new_InstanceData = InstanceData()
+        new_InstanceData.bboxes_3d = data_sample['eval_ann_info']['gt_bboxes_3d']
+        new_InstanceData.labels_3d = torch.tensor(data_sample['eval_ann_info']['gt_labels_3d'].tolist(), device='cuda:0')
+        # Added line to move the tensor to the right device
+        new_InstanceData.bboxes_3d = new_InstanceData.bboxes_3d.tensor.to('cuda:0')
+
+        # Create the right input for the inferencer
+        input_points = self.lidar_path_prefix + data_sample['lidar_path']
+        input_imgs = self.lidar_path_prefix + data_sample['img_path']
+        input_infos = self.lidar_path_prefix + self.ann_file
+        input = dict(
+            points = input_points,
+            img = input_imgs,
+            infos = input_infos)
+        
+        # Compute the losses with the inferencer, and add them to the dictionary
+        losses = self.inferencer(input, gt_bboxes=new_InstanceData)
+        new_dictionary['losses'] = losses
+
+        # Append the dictionary to the list of dictionaries
+        self.bboxes.append(new_dictionary)
+
+
+
+
+
+
+    # Description of the function in MinervaMetricLidar
     def compute_metrics(self, results: List[dict]) -> Dict[str, float]:
-        pass
+        """Compute the metrics from processed results.
+
+        Args:
+            results (List[dict]): The processed results of the whole dataset.
+
+        Returns:
+            Dict[str, float]: The computed metrics. The keys are the names of
+            the metrics, and the values are corresponding results.
+        """
+        logger: MMLogger = MMLogger.get_current_instance()
+
+
+
+        ############################################# NORMAL AP40 #############################################
+
+        # Create empty lists for precision and recall
+        precisions = []
+        recalls = []
+        # Compute the precision and recall for the scan.
+        # Do it for each value inside the list "self.iou_threshold_list" to have more data
+        for iou_value in self.iou_threshold_list:
+            precision, recall = self.compute_precision_recall(iou_value)
+            precisions.append(precision)
+            recalls.append(recall)
+        # Aggregate all precision-recall values into a single curve
+        precisions = np.array(sorted(precisions, reverse=True))
+        recalls = np.array(sorted(recalls))
+        # Compute AP40
+        ap40 = self.compute_ap40(precisions, recalls)
+
+
+
+        ############################################# REDUCED AP40 #############################################
+
+        # Create empty lists for precision and recall
+        precisions_reduced = []
+        recalls_reduced = []
+        # Compute the precision and recall for the scan.
+        # Do it for each value inside the list "self.iou_threshold_list" to have more data
+        for iou_value in self.iou_threshold_list:
+            precision, recall = self.compute_precision_recall(iou_value, self.reduced_x_limit)
+            precisions_reduced.append(precision)
+            recalls_reduced.append(recall)
+        # Aggregate all precision-recall values into a single curve
+        precisions_reduced = np.array(sorted(precisions_reduced, reverse=True))
+        recalls_reduced = np.array(sorted(recalls_reduced))
+        # Compute AP40
+        ap40_reduced = self.compute_ap40(precisions_reduced, recalls_reduced)
+
+
+
+        ############################################# LOSSES #############################################
+
+        # Gather all the losses by type in a single list
+        #   Num:    0               1       2
+        #   Type:   Classification  B-box   Direction
+        total_losses = [[], [], []]
+        for dict in self.bboxes:
+            total_losses[0].append(dict['losses'][0])
+            total_losses[1].append(dict['losses'][1])
+            total_losses[2].append(dict['losses'][2])
+        # Now compute the average losses
+        loss_cls = np.sum(total_losses[0])/len(total_losses[0])
+        loss_bbox = np.sum(total_losses[1])/len(total_losses[1])
+        loss_dir = np.sum(total_losses[2])/len(total_losses[2])
+        loss_general = loss_cls+loss_bbox+loss_dir
+
+
+
+        ############################################# SAVE DICTIONARY #############################################
+        
+        # If want to save losses, add a dictionary with the right losses
+        if self.save_losses_on_file:
+            # Group the last training dictionary
+            original_dict_list = self.handler.read_json_file()
+            updated_dict_list = group_training_dictionaries(original_dict_list)
+            self.handler.subscribe_all(updated_dict_list)
+            # Standard dictionary
+            self.handler.add_dictionary(
+                {'type': "validation",
+                'cls_loss': loss_cls,
+                'bbox_loss': loss_bbox,
+                'dir_loss': loss_dir,
+                'total_loss': loss_general,
+                'ap40': ap40,
+                'ap40_iou_thr_list': self.iou_threshold_list.tolist(),
+                'precisions_list': precisions.tolist(),
+                'recalls_list': recalls.tolist(),
+                'ap40_reduced': ap40_reduced,
+                'precisions_list_reduced': precisions_reduced.tolist(),
+                'recalls_list_reduced': recalls_reduced.tolist()}
+            )
+
+
+
+        ############################################# PRINT #############################################
+
+        # Prepare the "cool print"
+        pre_print = "\n\n---------------------------------------------------------------------------------------------------\n"\
+                    "Results for the validation dataset:\n\n" \
+                    "\t(Method)\t(Metric)\t(Threshold)\t(Value)\n"
+        post_print = "\n----------------------------------------------------------------------------\n"
+        print_log(f"{pre_print}"\
+            f"\tAP40\t\t3D metric\t[{self.start_iou:.2f} : {self.end_iou:.2f}]\t{ap40:.4f}\n"\
+            f"\tAP40_reduced\t3D metric\t (same)\t\t{ap40_reduced:.4f}\t   reduction: [{self.reduced_x_limit[0]};{self.reduced_x_limit[1]}]\n"
+            f"\tLoss_cls\t\t\t   /\t\t{loss_cls:.4f}\n"\
+            f"\tLoss_bbox\t\t\t   /\t\t{loss_bbox:.4f}\n"\
+            f"\tLoss_dir\t\t\t   /\t\t{loss_dir:.4f}\n"\
+            f"\tLoss\t\tTotal\t\t   /\t\t{loss_general:.4f}"\
+            f"{post_print}", logger=logger)
+
+        # Reset the parameter self.bboxes for next validation cycle
+        self.bboxes = []
+        # Reset the boolean for the initialization of the inferencer
+        self.inferencer_needs_update = True
+
+
+
+        ############################################# DELETE CHECKPOINTS #############################################
+        if self.delete_checkpoints:
+            files_list = sorted(os.listdir(self.checkpoints_folder))
+            for filename in files_list:
+                # Look for the match
+                match = re.search(r'epoch_(\d+)', filename)
+                if match:
+                    # Take the numeric part of the filename
+                    numeric_part = int(match.group(1))
+                    # Check if name of checkpoint is EXACT (must not contain underscores with other information)
+                    if filename == "epoch_"+str(numeric_part)+".pth":
+                        # Look for the "one-every-n" rule
+                        if int(numeric_part) % self.save_checkpoints_one_every_n:
+                            file_complete_path = os.path.join(self.checkpoints_folder, filename)
+                            os.remove(file_complete_path)
+
+
+
+        # Return the dictionary with "metric: value" for the "ugly" print
+        return {'AP40 (3d metric)': ap40,
+                'Loss_cls':         loss_cls,
+                'Loss_bbox':        loss_bbox,
+                'Loss_dir':         loss_dir,
+                'Loss_general':     loss_general}
+
+
+
+
+
+    # Description of the function in MinervaMetricLidar
+    def compute_precision_recall(self, iou_threshold_list, x_limit=None):
+        # Initialize the instance of BboxOverlaps3D to compute the IoU
+        iou_computer = BboxOverlaps3D(self.box_type)
+
+        # Initialize the number of true positives, false positives, false negatives
+        tp = 0
+        fp = 0
+        fn = 0
+        
+        # Cycle through the dictionaries --> A.K.A. through the scans in the dataset)
+        for dict in self.bboxes:
+            # Create a set (NO repetition!!) that tracks the indeces of matched ground truths
+            # It has to be initialized for EACH scan!!
+            matched_gts = set()
+            
+            # Create a pointer to the right fields of the dictionary
+            pred_bboxes = dict['pred_bboxes']
+            gt_bboxes = dict['gt_bboxes']
+
+            if x_limit is not None:
+                # Move the threshold values to the same device as pred_bboxes and gt_bboxes (otherwise get error)
+                device = pred_bboxes.device
+                lower_limit = torch.tensor(x_limit[0], device=device)
+                upper_limit = torch.tensor(x_limit[1], device=device)
+                # Filter the bboxes with the x_value if required
+                pred_bboxes = pred_bboxes[(pred_bboxes[:, 0] >= lower_limit) & (pred_bboxes[:, 0] <= upper_limit)]
+                gt_bboxes = gt_bboxes[(gt_bboxes[:, 0] >= x_limit[0]) & (gt_bboxes[:, 0] <= x_limit[1])]
+
+            # Many steps:
+            #       - cycle through the predictions
+            #       - then through the ground truths, to find the best match for the prediction
+            #       - when (and if) best match has been found:
+            #           - update the tp if over the iou_threshold_list and not already matched
+            #           - otherwise update the fp
+            for i in range(pred_bboxes.size(0)):
+                # Initialize values
+                best_iou = 0
+                best_gt_idx = -1
+                # Internal for loop
+                for j in range(gt_bboxes.size(0)):
+                    # Create the two tensors in such a way that BboxOverlaps3D likes it
+                    tensor1 = torch.Tensor(1, 7)
+                    tensor1[0] = pred_bboxes[i]
+                    tensor2 = torch.Tensor(1, 7)
+                    tensor2[0] = gt_bboxes[j]
+                    # Compute the IoU
+                    iou = iou_computer(tensor1, tensor2)
+                    # Check if the match has to be updated
+                    if iou > best_iou:
+                        best_iou = iou
+                        best_gt_idx = j
+                # Update tp or fp
+                if best_iou >= iou_threshold_list and best_gt_idx not in matched_gts:
+                    tp += 1
+                    matched_gts.add(best_gt_idx)
+                else:
+                    fp += 1
+
+            # False negatives are ground truths that were not matched
+            fn += (gt_bboxes.size(0) - len(matched_gts))
+
+        # Calculate precision and recall, and return them
+        precision = tp / (tp + fp + 1e-15)
+        recall = tp / (tp + fn + 1e-15)
+        return precision, recall
+
+
+
+
+
+
+    # Description of the function in MinervaMetricLidar
+    def compute_ap40(self, precisions, recalls):
+        
+        recall_levels = np.linspace(0, 1, 41)           # If I want 40 vertical strips, I need to 
+                                                        # set 41 "points"
+        ap40 = 0.0
+
+        for recall_level in recall_levels:
+            # Find the highest precision for the recall level or below
+            precisions_at_recall = precisions[recalls >= recall_level]
+            if precisions_at_recall.size > 0:
+                ap40 += np.max(precisions_at_recall)
+
+        ap40 /= len(recall_levels)
+        return ap40

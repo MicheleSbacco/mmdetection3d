@@ -16,6 +16,13 @@ from mmdet3d.registry import INFERENCERS
 from mmdet3d.utils import ConfigType
 from .base_3d_inferencer import Base3DInferencer
 
+
+
+# Added import to handle the computation of losses
+import copy
+
+
+
 InstanceList = List[InstanceData]
 InputType = Union[str, np.ndarray]
 InputsType = Union[InputType, Sequence[InputType]]
@@ -52,10 +59,15 @@ class MultiModalityDet3DInferencer(Base3DInferencer):
                  device: Optional[str] = None,
                  scope: str = 'mmdet3d',
                  palette: str = 'none',
+                 want_losses: bool = False,                                 # Added parameter to handle the computation of losses
                  show_progress: bool = False) -> None:                      # Added parameter to remove visualization of progress
         # A global counter tracking the number of frames processed, for
         # naming of the output results
         self.num_visualized_frames = 0
+        
+        # Added property to handle the computation of losses
+        self.want_losses = want_losses
+        
         super(MultiModalityDet3DInferencer, self).__init__(
             model=model,
             weights=weights,
@@ -345,3 +357,76 @@ class MultiModalityDet3DInferencer(Base3DInferencer):
             self.num_visualized_frames += 1
 
         return results
+
+
+
+
+
+
+    # Added function:
+    #   - mostly a copy of the implementation of "__call__" inside the parent class "Base3DInferencer"
+    #   - has an added section in case the "self.want_losses" boolean is True
+    def __call__(self,
+                 inputs: InputsType,
+                 batch_size: int = 1,
+                 return_datasamples: bool = False,
+                 gt_bboxes = None,                      # Added argument to handle the computation of losses
+                 **kwargs) -> Optional[dict]:
+        """Call the inferencer.
+
+        Args:
+            inputs (InputsType): Inputs for the inferencer.
+            batch_size (int): Batch size. Defaults to 1.
+            return_datasamples (bool): Whether to return results as
+                :obj:`BaseDataElement`. Defaults to False.
+            **kwargs: Key words arguments passed to :meth:`preprocess`,
+                :meth:`forward`, :meth:`visualize` and :meth:`postprocess`.
+                Each key in kwargs should be in the corresponding set of
+                ``preprocess_kwargs``, ``forward_kwargs``, ``visualize_kwargs``
+                and ``postprocess_kwargs``.
+
+
+        Returns:
+            dict: Inference and visualization results.
+        """
+
+        (
+            preprocess_kwargs,
+            forward_kwargs,
+            visualize_kwargs,
+            postprocess_kwargs,
+        ) = self._dispatch_kwargs(**kwargs)
+
+        cam_type = preprocess_kwargs.pop('cam_type', 'CAM2')
+        ori_inputs = self._inputs_to_list(inputs, cam_type=cam_type)
+        inputs = self.preprocess(
+            ori_inputs, batch_size=batch_size, **preprocess_kwargs)
+        preds = []
+
+        results_dict = {'predictions': [], 'visualization': []}
+        for data in inputs:
+            preds.extend(self.forward(data, **forward_kwargs))
+
+            # Added part to handle the computation of losses
+            if self.want_losses:
+                # Get the inputs (points) for the feature extraction
+                data1 = self.model.data_preprocessor(data, False)['inputs']                 # Modified boolean to "False" since it is
+                                                                                            # only needed for augmentation. We want
+                                                                                            # standard "real-like" validation images
+                                                                                            # so will set it False
+                # Add the gt_bboxes to the "data_samples" dictionary
+                data['data_samples'][0].gt_instances_3d = copy.deepcopy(gt_bboxes)
+                # Compute the losses for the dedicated function inside "mvx_two_stage.py"
+                losses = self.model.loss(data1, data['data_samples'])
+                # Return the losses in the form of a Python list
+                return [float(losses['loss_cls'][0]), float(losses['loss_bbox'][0]), float(losses['loss_dir'][0])]
+
+            visualization = self.visualize(ori_inputs, preds,
+                                           **visualize_kwargs)
+            results = self.postprocess(preds, visualization,
+                                       return_datasamples,
+                                       **postprocess_kwargs)
+            results_dict['predictions'].extend(results['predictions'])
+            if results['visualization'] is not None:
+                results_dict['visualization'].extend(results['visualization'])
+        return results_dict

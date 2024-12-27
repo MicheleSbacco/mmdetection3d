@@ -221,10 +221,18 @@ test_dataloader = dict(
 '''
 
 val_evaluator = dict(
-    type='MinervaMetricFusion',
-    ann_file=data_root + 'minerva_polimove_infos_val.pkl',
-    metric='bbox'
-)
+    ann_file='data/minerva_polimove/minerva_polimove_infos_val.pkl',
+    metric='bbox',
+    lidar_path_prefix = '/home/michele/code/michele_mmdet3d/',                                              # Needs update!!!
+    model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/MINERVA_mvxnet.py',                    # Needs update!!!
+    last_chkpt_file_path = '/home/michele/code/michele_mmdet3d/work_dirs/MINERVA_mvxnet/last_checkpoint',   # Needs update!!!
+    save_losses_on_file = True,
+    losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json",
+    reduced_x_limit = [0, 80],
+    delete_checkpoints = False,
+    checkpoints_folder = '/home/michele/code/michele_mmdet3d/work_dirs/MINERVA_mvxnet/',
+    save_checkpoints_one_every_n = 10,
+    type='MinervaMetricFusion')
 test_evaluator = val_evaluator
 
 

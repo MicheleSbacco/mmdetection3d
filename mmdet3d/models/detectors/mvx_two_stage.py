@@ -11,6 +11,12 @@ from mmdet3d.structures import Det3DDataSample
 from .base import Base3DDetector
 
 
+
+# Added import for the computation of losses
+from demo.json_handler import JSONHandler
+
+
+
 @MODELS.register_module()
 class MVXTwoStageDetector(Base3DDetector):
     """Base class of Multi-modality VoxelNet.
@@ -61,6 +67,8 @@ class MVXTwoStageDetector(Base3DDetector):
                  test_cfg: Optional[dict] = None,
                  init_cfg: Optional[dict] = None,
                  data_preprocessor: Optional[dict] = None,
+                 save_losses_on_file = True,            # Added parameter to save losses on a .json file
+                 losses_file_destination_path = None,   # Added parameter to save losses on a .json file
                  **kwargs):
         super(MVXTwoStageDetector, self).__init__(
             init_cfg=init_cfg, data_preprocessor=data_preprocessor, **kwargs)
@@ -93,6 +101,18 @@ class MVXTwoStageDetector(Base3DDetector):
 
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
+
+        # Added initialization to save losses on a .json file
+        self.save_losses_on_file = save_losses_on_file
+        if self.save_losses_on_file:
+            if losses_file_destination_path == None:
+                print("\n\n###########################################\
+                      \n#    Losses destination file is None!!    #\
+                      \n###########################################\n\n")
+                exit()
+            self.handler = JSONHandler(losses_file_destination_path)
+
+
 
     @property
     def with_img_shared_head(self):
@@ -277,6 +297,14 @@ class MVXTwoStageDetector(Base3DDetector):
         if img_feats:
             losses_img = self.loss_imgs(img_feats, batch_data_samples)
             losses.update(losses_img)
+        
+        # Added lines to save the losses on file
+        if self.save_losses_on_file:
+            self.handler.add_dictionary(
+                {'type': "training",
+                'total_loss': float(losses['loss_cls'][0]) + float(losses['loss_bbox'][0]) + float(losses['loss_dir'][0])}
+            )
+        
         return losses
 
     def loss_imgs(self, x: List[Tensor],

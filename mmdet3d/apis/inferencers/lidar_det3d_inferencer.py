@@ -298,7 +298,10 @@ class LidarDet3DInferencer(Base3DInferencer):
             # Added part to handle the computation of losses
             if self.want_losses:
                 # Get the inputs (points) for the feature extraction
-                data1 = self.model.data_preprocessor(data, True)['inputs']
+                data1 = self.model.data_preprocessor(data, False)['inputs']                 # Modified boolean to "False" since it is
+                                                                                            # only needed for augmentation. We want
+                                                                                            # standard "real-like" validation images
+                                                                                            # so will set it False
                 # Extract the features from the pointcloud (voxels, voxel_centres, etc..)
                 x = self.model.extract_feat(data1)
                 # Add the gt_bboxes to the "data_samples" dictionary

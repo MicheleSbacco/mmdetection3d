@@ -19,8 +19,15 @@ class MVXFasterRCNN(MVXTwoStageDetector):
 class DynamicMVXFasterRCNN(MVXTwoStageDetector):
     """Multi-modality VoxelNet using Faster R-CNN and dynamic voxelization."""
 
-    def __init__(self, **kwargs):
-        super(DynamicMVXFasterRCNN, self).__init__(**kwargs)
+    def __init__(self, 
+                 save_losses_on_file = True,            # Added parameter to save losses on a .json file
+                 losses_file_destination_path = None,   # Added parameter to save losses on a .json file
+                 **kwargs):
+        super(DynamicMVXFasterRCNN, self).__init__(
+            save_losses_on_file = save_losses_on_file,                      # Added parameter to save losses on a .json file
+            losses_file_destination_path = losses_file_destination_path,    # Added parameter to save losses on a .json file
+            **kwargs
+        )
 
     def extract_pts_feat(
             self,

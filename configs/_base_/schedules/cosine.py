@@ -13,10 +13,10 @@ param_scheduler = [
     dict(
         type='CosineAnnealingLR',
         begin=0,
-        T_max=40,
-        end=40,
+        T_max=200,
+        end=200,
         by_epoch=True,
-        eta_min=1e-5)
+        eta_min=1e-6)
 ]
 # training schedule for 1x
 train_cfg = dict(type='EpochBasedTrainLoop', max_epochs=40, val_interval=1)
