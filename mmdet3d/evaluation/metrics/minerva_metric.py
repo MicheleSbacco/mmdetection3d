@@ -546,6 +546,9 @@ class MinervaMetricLidar(BaseMetric):
 
 @METRICS.register_module()
 class MinervaMetricFusion(BaseMetric):
+
+
+
     def __init__(self,
                  ann_file: str,
                  metric: Union[str, List[str]] = 'bbox',
@@ -865,6 +868,7 @@ class MinervaMetricFusion(BaseMetric):
                 'Loss_bbox':        loss_bbox,
                 'Loss_dir':         loss_dir,
                 'Loss_general':     loss_general}
+
 
 
 
