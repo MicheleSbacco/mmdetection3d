@@ -50,12 +50,12 @@ def freq_plot_with_gaussian(values, title="Frequency Plot with Gaussian", column
 
 
 
-def plot_pie_chart(values_1, values_2, values_3):
+def plot_pie_chart(values_1, values_2, values_3, label_1, label_2, label_3):
     average_value1 = sum(values_1) / len(values_1)
     average_value2 = sum(values_2) / len(values_2)
     average_value3 = sum(values_3) / len(values_3)
     sizes = [average_value1, average_value2, average_value3]
-    labels = ["Pre-processing", "Inference", "Post-processing"]
+    labels = [label_1, label_2, label_3]
     colors = ['green', 'gold', 'gray']
     explosion = [.05, .05, .05]
 
