@@ -69,7 +69,7 @@ def plot_pie_chart(values_1, values_2, values_3, label_1, label_2, label_3):
 
 
 
-def plot_losses_metrics(epochs, training_losses, validation_losses, metric_ap40, metric_ap40_reduced):
+def plot_losses_metrics(epochs, training_losses, validation_losses, metric_ap40, metric_ap40_reduced, top_y_lim = None, x_lim=None):
     # Plot the training and validation losses
     plt.figure(figsize=(15, 10))
     plt.plot(epochs, training_losses, 'b-', marker='o', label='Training Loss')  # Blue line for training
@@ -91,6 +91,10 @@ def plot_losses_metrics(epochs, training_losses, validation_losses, metric_ap40,
     # Add labels and title
     plt.xlabel('Epochs', fontsize = fontsize_titles)
     plt.ylabel('Metrics', fontsize = fontsize_titles)
+    if top_y_lim is not None:
+        plt.ylim(top = top_y_lim)
+    if x_lim is not None:
+        plt.xlim(x_lim)
     plt.title('Training vs Validation Loss', fontsize = fontsize_titles)
 
     # Add annotations for each point (training)
