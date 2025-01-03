@@ -1,0 +1,777 @@
+auto_scale_lr = dict(base_batch_size=16, enable=False)
+class_names = [
+    'Car',
+]
+data_root = 'data/minerva_polimove/'
+dataset_type = 'MinervaCameraLidarDataset'
+db_sampler = dict(
+    backend_args=None,
+    classes=[
+        'Car',
+    ],
+    data_root='data/minerva_polimove/',
+    info_path='data/minerva_polimove/minerva_polimove_dbinfos_train.pkl',
+    points_loader=dict(
+        backend_args=None,
+        coord_type='LIDAR',
+        load_dim=4,
+        type='LoadPointsFromFile',
+        use_dim=4),
+    prepare=dict(filter_by_min_points=dict(Car=5)),
+    rate=1.0,
+    sample_groups=dict(Car=15))
+default_backend_args = None
+default_hooks = dict(
+    checkpoint=dict(interval=1, type='CheckpointHook'),
+    logger=dict(interval=50, type='LoggerHook'),
+    param_scheduler=dict(type='ParamSchedulerHook'),
+    sampler_seed=dict(type='DistSamplerSeedHook'),
+    timer=dict(type='IterTimerHook'),
+    visualization=dict(
+        draw=False,
+        draw_gt=True,
+        draw_pred=True,
+        interval=1,
+        score_thr=5e-07,
+        show=True,
+        type='Det3DVisualizationHook',
+        vis_task='multi-modality_det',
+        wait_time=15))
+default_scope = 'mmdet3d'
+env_cfg = dict(
+    cudnn_benchmark=False,
+    dist_cfg=dict(backend='nccl'),
+    mp_cfg=dict(mp_start_method='fork', opencv_num_threads=0))
+eval_pipeline = [
+    dict(
+        backend_args=None,
+        coord_type='LIDAR',
+        load_dim=4,
+        type='LoadPointsFromFile',
+        use_dim=4),
+    dict(keys=[
+        'points',
+        'img',
+    ], type='Pack3DDetInputs'),
+]
+input_modality = dict(use_camera=True, use_lidar=True)
+launcher = 'none'
+load_from = None
+log_level = 'INFO'
+log_processor = dict(by_epoch=True, type='LogProcessor', window_size=50)
+lr = 0.003
+metainfo = dict(classes=[
+    'Car',
+])
+model = dict(
+    data_preprocessor=dict(
+        bgr_to_rgb=False,
+        mean=[
+            102.9801,
+            115.9465,
+            122.7717,
+        ],
+        pad_size_divisor=32,
+        std=[
+            1.0,
+            1.0,
+            1.0,
+        ],
+        type='Det3DDataPreprocessor',
+        voxel=True,
+        voxel_layer=dict(
+            max_num_points=-1,
+            max_voxels=(
+                -1,
+                -1,
+            ),
+            point_cloud_range=[
+                0,
+                -28,
+                -2,
+                120,
+                28,
+                4.8,
+            ],
+            voxel_size=[
+                0.05,
+                0.05,
+                0.2,
+            ]),
+        voxel_type='dynamic'),
+    img_backbone=dict(
+        depth=50,
+        frozen_stages=1,
+        norm_cfg=dict(requires_grad=False, type='BN'),
+        norm_eval=True,
+        num_stages=4,
+        out_indices=(
+            0,
+            1,
+            2,
+            3,
+        ),
+        style='caffe',
+        type='mmdet.ResNet'),
+    img_neck=dict(
+        in_channels=[
+            256,
+            512,
+            1024,
+            2048,
+        ],
+        norm_cfg=dict(requires_grad=False, type='BN'),
+        num_outs=5,
+        out_channels=256,
+        type='mmdet.FPN'),
+    losses_file_destination_path=
+    '/home/michele/code/michele_mmdet3d/demo/losses_log.json',
+    pts_backbone=dict(
+        in_channels=256,
+        layer_nums=[
+            5,
+            5,
+        ],
+        layer_strides=[
+            1,
+            2,
+        ],
+        out_channels=[
+            128,
+            256,
+        ],
+        type='SECOND'),
+    pts_bbox_head=dict(
+        anchor_generator=dict(
+            ranges=[
+                [
+                    0,
+                    -30,
+                    -1,
+                    120,
+                    30,
+                    -1,
+                ],
+            ],
+            reshape_out=False,
+            rotations=[
+                0,
+                1.57,
+            ],
+            sizes=[
+                [
+                    5.0,
+                    2.0,
+                    1.5,
+                ],
+            ],
+            type='Anchor3DRangeGenerator'),
+        assign_per_class=True,
+        assigner_per_size=True,
+        bbox_coder=dict(type='DeltaXYZWLHRBBoxCoder'),
+        diff_rad_by_sin=True,
+        feat_channels=512,
+        in_channels=512,
+        loss_bbox=dict(
+            beta=0.1111111111111111,
+            loss_weight=2.0,
+            type='mmdet.SmoothL1Loss'),
+        loss_cls=dict(
+            alpha=0.25,
+            gamma=2.0,
+            loss_weight=1.0,
+            type='mmdet.FocalLoss',
+            use_sigmoid=True),
+        loss_dir=dict(
+            loss_weight=0.2, type='mmdet.CrossEntropyLoss', use_sigmoid=False),
+        num_classes=1,
+        type='Anchor3DHead',
+        use_direction_classifier=True),
+    pts_middle_encoder=dict(
+        in_channels=128,
+        order=(
+            'conv',
+            'norm',
+            'act',
+        ),
+        output_channels=256,
+        sparse_shape=[
+            34,
+            1120,
+            2400,
+        ],
+        type='SparseEncoder'),
+    pts_neck=dict(
+        in_channels=[
+            128,
+            256,
+        ],
+        out_channels=[
+            256,
+            256,
+        ],
+        type='SECONDFPN',
+        upsample_strides=[
+            1,
+            2,
+        ]),
+    pts_voxel_encoder=dict(
+        feat_channels=[
+            64,
+            64,
+        ],
+        fusion_layer=dict(
+            activate_out=True,
+            align_corners=False,
+            fuse_out=False,
+            img_channels=256,
+            img_levels=[
+                0,
+                1,
+                2,
+                3,
+                4,
+            ],
+            mid_channels=128,
+            out_channels=128,
+            pts_channels=64,
+            type='PointFusion'),
+        in_channels=4,
+        point_cloud_range=[
+            0,
+            -28,
+            -2,
+            120,
+            28,
+            4.8,
+        ],
+        type='DynamicVFE',
+        voxel_size=[
+            0.05,
+            0.05,
+            0.2,
+        ],
+        with_cluster_center=True,
+        with_distance=False,
+        with_voxel_center=True),
+    save_losses_on_file=True,
+    test_cfg=dict(
+        pts=dict(
+            max_num=50,
+            min_bbox_size=0,
+            nms_across_levels=False,
+            nms_pre=100,
+            nms_thr=0.01,
+            score_thr=0.1,
+            use_rotate_nms=True)),
+    train_cfg=dict(
+        pts=dict(
+            allowed_border=0,
+            assigner=[
+                dict(
+                    ignore_iof_thr=-1,
+                    iou_calculator=dict(type='BboxOverlapsNearest3D'),
+                    min_pos_iou=0.45,
+                    neg_iou_thr=0.45,
+                    pos_iou_thr=0.6,
+                    type='Max3DIoUAssigner'),
+            ],
+            debug=False,
+            pos_weight=-1)),
+    type='DynamicMVXFasterRCNN')
+optim_wrapper = dict(
+    clip_grad=dict(max_norm=35, norm_type=2),
+    optimizer=dict(
+        betas=(
+            0.95,
+            0.99,
+        ), lr=0.003, type='AdamW', weight_decay=0.01),
+    type='OptimWrapper')
+param_scheduler = [
+    dict(begin=0, by_epoch=False, end=1000, start_factor=0.1, type='LinearLR'),
+    dict(
+        T_max=180,
+        begin=0,
+        by_epoch=True,
+        end=180,
+        eta_min=1e-05,
+        type='CosineAnnealingLR'),
+    dict(
+        T_max=50,
+        begin=180,
+        by_epoch=True,
+        end=220,
+        eta_min=1e-06,
+        type='CosineAnnealingLR'),
+    dict(
+        T_max=80,
+        begin=220,
+        by_epoch=True,
+        end=300,
+        eta_min=1e-07,
+        type='CosineAnnealingLR'),
+]
+point_cloud_range = [
+    0,
+    -28,
+    -2,
+    120,
+    28,
+    4.8,
+]
+resume = True
+sparse_shape_default = [
+    34,
+    1120,
+    2400,
+]
+test_cfg = dict(type='TestLoop')
+test_dataloader = dict(
+    batch_size=1,
+    dataset=dict(
+        ann_file='minerva_polimove_infos_val.pkl',
+        backend_args=None,
+        box_type_3d='LiDAR',
+        data_prefix=dict(
+            img='training/image_2', pts='training/velodyne_reduced'),
+        data_root='data/minerva_polimove/',
+        metainfo=dict(classes=[
+            'Car',
+        ]),
+        modality=dict(use_camera=True, use_lidar=True),
+        pipeline=[
+            dict(
+                backend_args=None,
+                coord_type='LIDAR',
+                load_dim=4,
+                type='LoadPointsFromFile',
+                use_dim=4),
+            dict(backend_args=None, type='LoadImageFromFile'),
+            dict(
+                flip=False,
+                img_scale=(
+                    1333,
+                    800,
+                ),
+                pts_scale_ratio=1,
+                transforms=[
+                    dict(
+                        rot_range=[
+                            0,
+                            0,
+                        ],
+                        scale_ratio_range=[
+                            1.0,
+                            1.0,
+                        ],
+                        translation_std=[
+                            0,
+                            0,
+                            0,
+                        ],
+                        type='GlobalRotScaleTrans'),
+                    dict(type='RandomFlip3D'),
+                    dict(
+                        point_cloud_range=[
+                            -70,
+                            -20,
+                            -2,
+                            150,
+                            20,
+                            5,
+                        ],
+                        type='PointsRangeFilter'),
+                ],
+                type='MultiScaleFlipAug3D'),
+            dict(keys=[
+                'points',
+                'img',
+            ], type='Pack3DDetInputs'),
+        ],
+        test_mode=True,
+        type='MinervaCameraLidarDataset'),
+    drop_last=False,
+    num_workers=1,
+    persistent_workers=True,
+    sampler=dict(shuffle=False, type='DefaultSampler'))
+test_evaluator = dict(
+    ann_file='data/minerva_polimove/minerva_polimove_infos_val.pkl',
+    checkpoints_folder=
+    '/home/michele/code/michele_mmdet3d/work_dirs/MINERVA_mvxnet/',
+    delete_checkpoints=True,
+    last_chkpt_file_path=
+    '/home/michele/code/michele_mmdet3d/work_dirs/MINERVA_mvxnet/last_checkpoint',
+    lidar_path_prefix='/home/michele/code/michele_mmdet3d/',
+    losses_file_destination_path=
+    '/home/michele/code/michele_mmdet3d/demo/losses_log.json',
+    metric='bbox',
+    model_path=
+    '/home/michele/code/michele_mmdet3d/configs/minerva/MINERVA_mvxnet.py',
+    reduced_x_limit=[
+        0,
+        80,
+    ],
+    save_checkpoints_one_every_n=10,
+    save_losses_on_file=True,
+    type='MinervaMetricFusion')
+test_pipeline = [
+    dict(
+        backend_args=None,
+        coord_type='LIDAR',
+        load_dim=4,
+        type='LoadPointsFromFile',
+        use_dim=4),
+    dict(backend_args=None, type='LoadImageFromFile'),
+    dict(
+        flip=False,
+        img_scale=(
+            1333,
+            800,
+        ),
+        pts_scale_ratio=1,
+        transforms=[
+            dict(
+                rot_range=[
+                    0,
+                    0,
+                ],
+                scale_ratio_range=[
+                    1.0,
+                    1.0,
+                ],
+                translation_std=[
+                    0,
+                    0,
+                    0,
+                ],
+                type='GlobalRotScaleTrans'),
+            dict(type='RandomFlip3D'),
+            dict(
+                point_cloud_range=[
+                    -70,
+                    -20,
+                    -2,
+                    150,
+                    20,
+                    5,
+                ],
+                type='PointsRangeFilter'),
+        ],
+        type='MultiScaleFlipAug3D'),
+    dict(keys=[
+        'points',
+        'img',
+    ], type='Pack3DDetInputs'),
+]
+train_cfg = dict(max_epochs=300, type='EpochBasedTrainLoop', val_interval=1)
+train_dataloader = dict(
+    batch_size=1,
+    dataset=dict(
+        dataset=dict(
+            ann_file='minerva_polimove_infos_train.pkl',
+            backend_args=None,
+            box_type_3d='LiDAR',
+            data_prefix=dict(
+                img='training/image_2', pts='training/velodyne_reduced'),
+            data_root='data/minerva_polimove/',
+            metainfo=dict(classes=[
+                'Car',
+            ]),
+            modality=dict(use_camera=True, use_lidar=True),
+            pipeline=[
+                dict(
+                    backend_args=None,
+                    coord_type='LIDAR',
+                    load_dim=4,
+                    type='LoadPointsFromFile',
+                    use_dim=4),
+                dict(backend_args=None, type='LoadImageFromFile'),
+                dict(
+                    type='LoadAnnotations3D',
+                    with_bbox_3d=True,
+                    with_label_3d=True),
+                dict(
+                    db_sampler=dict(
+                        backend_args=None,
+                        classes=[
+                            'Car',
+                        ],
+                        data_root='data/minerva_polimove/',
+                        info_path=
+                        'data/minerva_polimove/minerva_polimove_dbinfos_train.pkl',
+                        points_loader=dict(
+                            backend_args=None,
+                            coord_type='LIDAR',
+                            load_dim=4,
+                            type='LoadPointsFromFile',
+                            use_dim=4),
+                        prepare=dict(filter_by_min_points=dict(Car=5)),
+                        rate=1.0,
+                        sample_groups=dict(Car=15)),
+                    type='ObjectSample'),
+                dict(
+                    global_rot_range=[
+                        0.0,
+                        0.0,
+                    ],
+                    num_try=100,
+                    rot_range=[
+                        -0.78539816,
+                        0.78539816,
+                    ],
+                    translation_std=[
+                        1.0,
+                        1.0,
+                        0.5,
+                    ],
+                    type='ObjectNoise'),
+                dict(
+                    rot_range=[
+                        -0.78539816,
+                        0.78539816,
+                    ],
+                    scale_ratio_range=[
+                        0.95,
+                        1.05,
+                    ],
+                    translation_std=[
+                        0.2,
+                        0.2,
+                        0.2,
+                    ],
+                    type='GlobalRotScaleTrans'),
+                dict(flip_ratio_bev_horizontal=0.5, type='RandomFlip3D'),
+                dict(
+                    point_cloud_range=[
+                        -70,
+                        -20,
+                        -2,
+                        150,
+                        20,
+                        5,
+                    ],
+                    type='PointsRangeFilter'),
+                dict(
+                    point_cloud_range=[
+                        -70,
+                        -20,
+                        -2,
+                        150,
+                        20,
+                        5,
+                    ],
+                    type='ObjectRangeFilter'),
+                dict(type='PointShuffle'),
+                dict(
+                    keys=[
+                        'points',
+                        'img',
+                        'gt_bboxes_3d',
+                        'gt_labels_3d',
+                        'gt_bboxes',
+                        'gt_labels',
+                    ],
+                    type='Pack3DDetInputs'),
+            ],
+            type='MinervaCameraLidarDataset'),
+        times=1,
+        type='RepeatDataset'),
+    num_workers=1,
+    persistent_workers=True,
+    sampler=dict(shuffle=True, type='DefaultSampler'))
+train_pipeline = [
+    dict(
+        backend_args=None,
+        coord_type='LIDAR',
+        load_dim=4,
+        type='LoadPointsFromFile',
+        use_dim=4),
+    dict(backend_args=None, type='LoadImageFromFile'),
+    dict(type='LoadAnnotations3D', with_bbox_3d=True, with_label_3d=True),
+    dict(
+        db_sampler=dict(
+            backend_args=None,
+            classes=[
+                'Car',
+            ],
+            data_root='data/minerva_polimove/',
+            info_path=
+            'data/minerva_polimove/minerva_polimove_dbinfos_train.pkl',
+            points_loader=dict(
+                backend_args=None,
+                coord_type='LIDAR',
+                load_dim=4,
+                type='LoadPointsFromFile',
+                use_dim=4),
+            prepare=dict(filter_by_min_points=dict(Car=5)),
+            rate=1.0,
+            sample_groups=dict(Car=15)),
+        type='ObjectSample'),
+    dict(
+        global_rot_range=[
+            0.0,
+            0.0,
+        ],
+        num_try=100,
+        rot_range=[
+            -0.78539816,
+            0.78539816,
+        ],
+        translation_std=[
+            1.0,
+            1.0,
+            0.5,
+        ],
+        type='ObjectNoise'),
+    dict(
+        rot_range=[
+            -0.78539816,
+            0.78539816,
+        ],
+        scale_ratio_range=[
+            0.95,
+            1.05,
+        ],
+        translation_std=[
+            0.2,
+            0.2,
+            0.2,
+        ],
+        type='GlobalRotScaleTrans'),
+    dict(flip_ratio_bev_horizontal=0.5, type='RandomFlip3D'),
+    dict(
+        point_cloud_range=[
+            -70,
+            -20,
+            -2,
+            150,
+            20,
+            5,
+        ],
+        type='PointsRangeFilter'),
+    dict(
+        point_cloud_range=[
+            -70,
+            -20,
+            -2,
+            150,
+            20,
+            5,
+        ],
+        type='ObjectRangeFilter'),
+    dict(type='PointShuffle'),
+    dict(
+        keys=[
+            'points',
+            'img',
+            'gt_bboxes_3d',
+            'gt_labels_3d',
+            'gt_bboxes',
+            'gt_labels',
+        ],
+        type='Pack3DDetInputs'),
+]
+val_cfg = dict(type='ValLoop')
+val_dataloader = dict(
+    batch_size=1,
+    dataset=dict(
+        ann_file='minerva_polimove_infos_val.pkl',
+        backend_args=None,
+        box_type_3d='LiDAR',
+        data_prefix=dict(
+            img='training/image_2', pts='training/velodyne_reduced'),
+        data_root='data/minerva_polimove/',
+        metainfo=dict(classes=[
+            'Car',
+        ]),
+        modality=dict(use_camera=True, use_lidar=True),
+        pipeline=[
+            dict(
+                backend_args=None,
+                coord_type='LIDAR',
+                load_dim=4,
+                type='LoadPointsFromFile',
+                use_dim=4),
+            dict(backend_args=None, type='LoadImageFromFile'),
+            dict(
+                flip=False,
+                img_scale=(
+                    1333,
+                    800,
+                ),
+                pts_scale_ratio=1,
+                transforms=[
+                    dict(
+                        rot_range=[
+                            0,
+                            0,
+                        ],
+                        scale_ratio_range=[
+                            1.0,
+                            1.0,
+                        ],
+                        translation_std=[
+                            0,
+                            0,
+                            0,
+                        ],
+                        type='GlobalRotScaleTrans'),
+                    dict(type='RandomFlip3D'),
+                    dict(
+                        point_cloud_range=[
+                            -70,
+                            -20,
+                            -2,
+                            150,
+                            20,
+                            5,
+                        ],
+                        type='PointsRangeFilter'),
+                ],
+                type='MultiScaleFlipAug3D'),
+            dict(keys=[
+                'points',
+                'img',
+            ], type='Pack3DDetInputs'),
+        ],
+        test_mode=True,
+        type='MinervaCameraLidarDataset'),
+    drop_last=False,
+    num_workers=1,
+    persistent_workers=True,
+    sampler=dict(shuffle=False, type='DefaultSampler'))
+val_evaluator = dict(
+    ann_file='data/minerva_polimove/minerva_polimove_infos_val.pkl',
+    checkpoints_folder=
+    '/home/michele/code/michele_mmdet3d/work_dirs/MINERVA_mvxnet/',
+    delete_checkpoints=True,
+    last_chkpt_file_path=
+    '/home/michele/code/michele_mmdet3d/work_dirs/MINERVA_mvxnet/last_checkpoint',
+    lidar_path_prefix='/home/michele/code/michele_mmdet3d/',
+    losses_file_destination_path=
+    '/home/michele/code/michele_mmdet3d/demo/losses_log.json',
+    metric='bbox',
+    model_path=
+    '/home/michele/code/michele_mmdet3d/configs/minerva/MINERVA_mvxnet.py',
+    reduced_x_limit=[
+        0,
+        80,
+    ],
+    save_checkpoints_one_every_n=10,
+    save_losses_on_file=True,
+    type='MinervaMetricFusion')
+vis_backends = [
+    dict(type='LocalVisBackend'),
+]
+visualizer = dict(
+    name='visualizer',
+    type='Det3DLocalVisualizer',
+    vis_backends=[
+        dict(type='LocalVisBackend'),
+    ])
+voxel_size = [
+    0.05,
+    0.05,
+    0.2,
+]
+work_dir = './work_dirs/MINERVA_mvxnet'
