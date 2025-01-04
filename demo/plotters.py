@@ -4,18 +4,26 @@ import numpy as np
 
 
 
-def freq_plot(values, title = "Frequency Plot"):
-    # Calculating the average value of the given list
+def freq_plot_with_variance(values, title="Frequency Plot with Gaussian", columns_color="blue", n_bins = 80):
+
+    # Calculating the average value and the sample variance of the given list
     average_value = sum(values) / len(values)
+    sample_variance = sum((x - average_value) ** 2 for x in values) / (len(values) - 1)
+    sample_std_dev = np.sqrt(sample_variance)
 
     # Plotting the frequency plot with a vertical red line for the average value
-    plt.figure(figsize=(15, 10))
-    plt.hist(values, bins=20, alpha=0.7, color='blue', edgecolor='black')
-    plt.axvline(average_value, color='red', linestyle='dashed', linewidth=2, label=f'Average: {(average_value*1000):.2f}')
-    plt.title(title)
-    plt.xlabel("Value")
-    plt.ylabel("Frequency")
-    plt.legend()
+    plt.figure(figsize=(10, 5))
+    n_bins = n_bins
+    plt.hist(values, bins=n_bins, alpha=0.7, color=columns_color, edgecolor='black', density=False)
+    plt.axvline(average_value, color='red', linestyle='--', linewidth=3, label=f'$\mu={average_value:.2f}$')
+
+    # Plotting the fake curve for the variance
+    plt.plot([0], [0], color='black', linestyle='None', linewidth=0.1, label=f'$\sigma={sample_std_dev:.2f}$')
+
+    plt.title(title, fontsize = 16)
+    plt.legend(fontsize=16)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=12)
     plt.grid(True)
     plt.show()
 
