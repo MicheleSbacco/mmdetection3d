@@ -45,7 +45,7 @@ class MinervaLidarOnlyDataset(Det3DDataset):
             data_root=data_root,
             ann_file=ann_file,
             pipeline=pipeline,
-            modality=modality,
+            modality=dict(use_lidar=True, use_camera=False),
             default_cam_key=default_cam_key,
             box_type_3d=box_type_3d,
             filter_empty_gt=filter_empty_gt,

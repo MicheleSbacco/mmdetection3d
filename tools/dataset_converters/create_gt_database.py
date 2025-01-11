@@ -294,10 +294,10 @@ def create_minerva_polimove_groundtruth_database(dataset_class_name,
     # Adapt to the real dataset name
     if dataset_class_name == "minerva_polimove_cameralidar":
         dataset_class_name = "MinervaCameraLidarDataset"
-        use_images = False
+        use_images = True
     elif dataset_class_name == "minerva_polimove_lidaronly":
         dataset_class_name = "MinervaLidarOnlyDataset"
-        use_images = True
+        use_images = False
     else:
         print("Wrong dataset! Quitting...")
         return
