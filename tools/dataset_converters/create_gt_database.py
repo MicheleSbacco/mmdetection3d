@@ -289,7 +289,8 @@ def create_minerva_polimove_groundtruth_database(dataset_class_name,
                                                  info_path=None,
                                                  used_classes=None,
                                                  database_save_path=None,
-                                                 db_info_save_path=None):
+                                                 db_info_save_path=None,
+                                                 is_augmented = False):
 
     # Adapt to the real dataset name
     if dataset_class_name == "minerva_polimove_cameralidar":
@@ -320,6 +321,12 @@ def create_minerva_polimove_groundtruth_database(dataset_class_name,
             img='training/image_2'
         )
 
+    # Create the configuration for the number of features, based on the is_agumented boolean
+    if not is_augmented:
+        num_lidar_features = 4
+    else:
+        num_lidar_features = 5
+
     # Build a dataset using a connfiguration also present in the "mmdet3d/datasets" folder
     dataset_cfg = dict(
         type=dataset_class_name, 
@@ -334,8 +341,8 @@ def create_minerva_polimove_groundtruth_database(dataset_class_name,
             dict(
                 type='LoadPointsFromFile',
                 coord_type='LIDAR',
-                load_dim=4,
-                use_dim=4,
+                load_dim=num_lidar_features,    # Depends on the augmentation of the pointcloud
+                use_dim=num_lidar_features,     # Depends on the augmentation of the pointcloud
                 backend_args=None),
             dict(
                 type='LoadAnnotations3D',

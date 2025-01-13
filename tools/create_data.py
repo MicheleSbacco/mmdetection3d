@@ -159,10 +159,15 @@ def minerva_polimove_data_prep(root_path,
                              info_prefix,
                              version,
                              out_dir,
-                             use_images):
+                             use_images,
+                             is_augmented):
+    
+    if use_images and is_augmented:
+        raise NotImplementedError("The case when images are used AND the pointcloud is augmented is NOT implemented,"\
+                                  " and it will probably NOT work...")
     
     # Create the ".pkl" files
-    mpc.create_minerva_polimove_info_file(root_path, info_prefix, use_images)
+    mpc.create_minerva_polimove_info_file(root_path, info_prefix, use_images, is_augmented)
     
     # Create the "reduced" point clouds, only if use images.
     if use_images:                                                                              ## Used the "use_images" boolean here
@@ -194,7 +199,8 @@ def minerva_polimove_data_prep(root_path,
         minerva_dataset_choice,
         root_path,
         info_prefix,
-        f'{info_prefix}_infos_train.pkl')
+        f'{info_prefix}_infos_train.pkl',
+        is_augmented = is_augmented)
 
 
 
@@ -502,6 +508,11 @@ parser.add_argument(
     action='store_false',
     default=True,
     help='''If written, disables images in the creation of ".pkl" files''')
+parser.add_argument(
+    '--is-augmented',
+    action='store_true',
+    default=False,
+    help='''If written, makes the number of features of the lidar points from 4 to 5''')
 args = parser.parse_args()
 
 if __name__ == '__main__':
@@ -619,6 +630,7 @@ if __name__ == '__main__':
             info_prefix=args.extra_tag,
             version=args.version,
             out_dir=args.out_dir,
-            use_images=args.remove_images)
+            use_images=args.remove_images,
+            is_augmented=args.is_augmented)
     else:
         raise NotImplementedError(f'Don\'t support {args.dataset} dataset.')

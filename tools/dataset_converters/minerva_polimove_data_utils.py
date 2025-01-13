@@ -159,6 +159,7 @@ End of the copied functions
 #   - Uses the boolean "use_images" that deactivates the creation of data for the images 
 def get_minerva_polimove_image_info(path,
                                   use_images,
+                                  is_augmented,
                                   training=True,
                                   label_info=True,
                                   velodyne=False,
@@ -184,7 +185,7 @@ def get_minerva_polimove_image_info(path,
         #                                   - "image"
         #                               - "annotations" for the ground truth
         info = {}
-        pc_info = {'num_features': 4}
+        pc_info = {'num_features': 4} if not is_augmented else {'num_features': 5}
         if use_images:                                                              ## Used the "use_images" boolean here
             calib_info = {}
             image_info = {'image_idx': idx}

@@ -61,26 +61,17 @@ def _calculate_num_points_in_gt(data_path,
         dims = annos['dimensions'][:num_obj]
         loc = annos['location'][:num_obj]
         rots = annos['rotation_y'][:num_obj]
-        
-
-
 
 
 
         # TODO: Check here because there is a conversion from camera_frame to lidar_frame. But we already have all the
         # bboxes in lidar frame...
+        # NOTE:
+        #   - The conversion has been removed
+        #   - In the end, it is not needed, not even if we are using cameras  
         gt_boxes_camera = np.concatenate([loc, dims, rots[..., np.newaxis]],
                                          axis=1)
         gt_boxes = gt_boxes_camera
-        
-        # if use_images:
-        #     gt_boxes = box_np_ops.box_camera_to_lidar(
-        #         gt_boxes_camera, rect, Trv2c)
-        # else:
-        #     gt_boxes = gt_boxes_camera
-        
-
-
 
 
 
@@ -113,6 +104,7 @@ def _calculate_num_points_in_gt(data_path,
 def create_minerva_polimove_info_file(data_path,
                                     pkl_prefix,
                                     use_images,
+                                    is_augmented,
                                     relative_path=True):
 
     # Gather the indeces of the various datasets (the results are lists)
@@ -133,13 +125,15 @@ def create_minerva_polimove_info_file(data_path,
     minerva_polimove_infos_train = get_minerva_polimove_image_info(
         data_path,
         use_images,
+        is_augmented,
         training=True,
         velodyne=True,
         calib=True,
         image_ids=train_img_ids,
         relative_path=relative_path)
     # Add the number of LiDAR points for each instance in the "annos" field. 
-    _calculate_num_points_in_gt(data_path, minerva_polimove_infos_train, relative_path, use_images)
+    _calculate_num_points_in_gt(data_path, minerva_polimove_infos_train, relative_path, use_images,
+                                num_features = 4 if not is_augmented else 5)
     # Save the dictionary on the related ".pkl" file
     filename = save_path / f'{pkl_prefix}_infos_train.pkl'
     print(f'{pkl_prefix} info train file is saved to {filename}')
@@ -149,12 +143,14 @@ def create_minerva_polimove_info_file(data_path,
     minerva_polimove_infos_val = get_minerva_polimove_image_info(
         data_path,
         use_images,
+        is_augmented,
         training=True,
         velodyne=True,
         calib=True,
         image_ids=val_img_ids,
         relative_path=relative_path)
-    _calculate_num_points_in_gt(data_path, minerva_polimove_infos_val, relative_path, use_images)
+    _calculate_num_points_in_gt(data_path, minerva_polimove_infos_val, relative_path, use_images,
+                                num_features = 4 if not is_augmented else 5)
     filename = save_path / f'{pkl_prefix}_infos_val.pkl'
     print(f'{pkl_prefix} info val file is saved to {filename}')
     mmengine.dump(minerva_polimove_infos_val, filename)
@@ -170,6 +166,7 @@ def create_minerva_polimove_info_file(data_path,
     minerva_polimove_infos_test = get_minerva_polimove_image_info(
         data_path,
         use_images,
+        is_augmented,
         training=False,
         label_info=False,
         velodyne=True,
