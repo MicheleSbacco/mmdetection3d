@@ -235,7 +235,7 @@ model = dict(
         ],
         with_distance=False))
 optim_wrapper = dict(
-    clip_grad=dict(max_norm=35, norm_type=2),
+    clip_grad=dict(max_norm=15, norm_type=2),
     optimizer=dict(
         betas=(
             0.95,
@@ -246,7 +246,7 @@ param_scheduler = [
     dict(
         type='CosineAnnealingLR',
         T_max=30,
-        eta_min=1e-2,
+        eta_min=1e-4,
         begin=0,
         end=30,
         by_epoch=True,
@@ -262,7 +262,7 @@ param_scheduler = [
     dict(
         type='CosineAnnealingLR',
         T_max=30,
-        eta_min=1e-7,
+        eta_min=1e-6,
         begin=60,
         end=90,
         by_epoch=True,
@@ -270,40 +270,40 @@ param_scheduler = [
     dict(
         type='CosineAnnealingLR',
         T_max=30,
-        eta_min=1e-9,
+        eta_min=1e-7,
         begin=90,
         end=120,
         by_epoch=True,
         convert_to_iter_based=True),
     dict(
-        T_max=24,
+        T_max=30,
         begin=0,
         by_epoch=True,
         convert_to_iter_based=True,
-        end=24,
-        eta_min=0.8947368421052632,
+        end=30,
+        eta_min=0.85,
         type='CosineAnnealingMomentum'),
     dict(
-        T_max=36,
-        begin=24,
+        T_max=30,
+        begin=30,
         convert_to_iter_based=True,
         end=60,
-        eta_min=1,
+        eta_min=0.8,
         type='CosineAnnealingMomentum'),
     dict(
-        T_max=24,
+        T_max=30,
         begin=60,
         by_epoch=True,
         convert_to_iter_based=True,
-        end=84,
-        eta_min=1,
+        end=90,
+        eta_min=0.75,
         type='CosineAnnealingMomentum'),
     dict(
-        T_max=36,
-        begin=84,
+        T_max=30,
+        begin=90,
         convert_to_iter_based=True,
         end=120,
-        eta_min=1,
+        eta_min=0.7,
         type='CosineAnnealingMomentum'),
 ]
 point_cloud_range=[
