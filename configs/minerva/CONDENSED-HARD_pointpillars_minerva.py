@@ -154,7 +154,8 @@ model = dict(
                 0.16,
                 0.16,
                 7,
-            ])),
+            ]),
+        voxel_type='hard'),
     middle_encoder=dict(
         in_channels=64, output_shape=[
             400,
