@@ -136,7 +136,7 @@ model = dict(
         type='Det3DDataPreprocessor',
         voxel=True,
         voxel_layer=dict(
-            deterministic=True,
+            deterministic=False,
             max_num_points=32,
             max_voxels=(
                 20000,

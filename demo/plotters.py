@@ -15,10 +15,10 @@ def freq_plot_with_variance(values, title="Frequency Plot with Gaussian", column
     plt.figure(figsize=(10, 5))
     n_bins = n_bins
     plt.hist(values, bins=n_bins, alpha=0.7, color=columns_color, edgecolor='black', density=False)
-    plt.axvline(average_value, color='red', linestyle='--', linewidth=3, label=f'$\mu={average_value:.2f}$')
+    plt.axvline(average_value, color='red', linestyle='--', linewidth=3, label=f'$\mu={average_value:.4f}$')
 
     # Plotting the fake curve for the variance
-    plt.plot([0], [0], color='black', linestyle='None', linewidth=0.1, label=f'$\sigma={sample_std_dev:.2f}$')
+    plt.plot([0], [0], color='black', linestyle='None', linewidth=0.1, label=f'$\sigma={sample_std_dev:.4f}$')
 
     plt.title(title, fontsize = 16)
     plt.legend(fontsize=16)
