@@ -44,7 +44,7 @@ sparse_shape_default=[
 
 model = dict(
     type='DynamicMVXFasterRCNN',
-    save_losses_on_file = True,
+    save_losses_on_file = False,
     losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json",
     data_preprocessor=dict(
         type='Det3DDataPreprocessor',
@@ -101,12 +101,14 @@ model = dict(
         sparse_shape=sparse_shape_default,
         order=('conv', 'norm', 'act'),
 
-        # NOTE: Modified version, comment to use standard values (default in SparseEncoder)
+        # NOTE: Modified version, comment to use standard values --> Default values are 
+        #       in SparseEncoder for the optional arguments
         # base_channels=32,
         # encoder_channels=((32,),
         #                   (64, 64, 64),
         #                   (128, 128, 128),
         #                   (128, 128, 128))
+
     ),
     pts_backbone=dict(
         type='SECOND',
@@ -175,7 +177,7 @@ model = dict(
             nms_pre=100,
             max_num=50)))
 
-train_cfg = dict(max_epochs=210, val_interval=1)
+train_cfg = dict(max_epochs=300, val_interval=100)
 
 optim_wrapper = dict(
     optimizer=dict(weight_decay=0.01),
@@ -185,4 +187,6 @@ optim_wrapper = dict(
 # You may need to download the model first is the network is unstable
 # load_from = 'https://download.openmmlab.com/mmdetection3d/pretrain_models/mvx_faster_rcnn_detectron2-caffe_20e_coco-pretrain_gt-sample_kitti-3-class_moderate-79.3_20200207-a4a6a3c7.pth'  # noqa
 
-resume = True
+resume = False
+
+work_dir = './work_dirs/MINERVA_mvxet'
