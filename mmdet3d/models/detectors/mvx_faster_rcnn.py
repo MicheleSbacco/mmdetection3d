@@ -7,19 +7,28 @@ from mmdet3d.registry import MODELS
 from .mvx_two_stage import MVXTwoStageDetector
 
 
+
 @MODELS.register_module()
 class MVXFasterRCNN(MVXTwoStageDetector):
     """Multi-modality VoxelNet using Faster R-CNN."""
 
-    def __init__(self, **kwargs):
-        super(MVXFasterRCNN, self).__init__(**kwargs)
+    def __init__(self,
+                 save_losses_on_file = True,            # Added parameter to save losses on a .json file
+                 losses_file_destination_path = None,   # Added parameter to save losses on a .json file
+                 **kwargs):
+        super(MVXFasterRCNN, self).__init__(
+            save_losses_on_file = save_losses_on_file,                      # Added parameter to save losses on a .json file
+            losses_file_destination_path = losses_file_destination_path,    # Added parameter to save losses on a .json file
+            **kwargs
+        )
+
 
 
 @MODELS.register_module()
 class DynamicMVXFasterRCNN(MVXTwoStageDetector):
     """Multi-modality VoxelNet using Faster R-CNN and dynamic voxelization."""
 
-    def __init__(self, 
+    def __init__(self,
                  save_losses_on_file = True,            # Added parameter to save losses on a .json file
                  losses_file_destination_path = None,   # Added parameter to save losses on a .json file
                  **kwargs):

@@ -43,18 +43,22 @@ sparse_shape_default=[
     int((point_cloud_range[3]-point_cloud_range[0])/voxel_size[0])]     # x dimension
 
 model = dict(
-    type='DynamicMVXFasterRCNN',
-    save_losses_on_file = False,
+    type='MVXFasterRCNN',       # Could also be class "MVXTwoStageDetector" 
+                                # because only the dynamic one changes something
+    save_losses_on_file = True,
     losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json",
     data_preprocessor=dict(
         type='Det3DDataPreprocessor',
         voxel=True,
-        voxel_type='dynamic',
+        voxel_type='hard',
         voxel_layer=dict(
-            max_num_points=-1,
+            deterministic=False,
+            max_num_points=32,
+            max_voxels=(
+                20000,  # For training
+                40000), # For testing
             point_cloud_range=point_cloud_range,
-            voxel_size=voxel_size,
-            max_voxels=(-1, -1)),
+            voxel_size=voxel_size),
         mean=[102.9801, 115.9465, 122.7717],
         std=[1.0, 1.0, 1.0],
         bgr_to_rgb=False,
@@ -76,7 +80,7 @@ model = dict(
         norm_cfg=dict(type='BN', requires_grad=False),
         num_outs=5),
     pts_voxel_encoder=dict(
-        type='DynamicVFE',
+        type='HardVFE',
         in_channels=4,
         feat_channels=[64, 64],
         with_distance=False,
@@ -177,7 +181,7 @@ model = dict(
             nms_pre=100,
             max_num=50)))
 
-train_cfg = dict(max_epochs=300, val_interval=100)
+train_cfg = dict(max_epochs=200, val_interval=1)
 
 optim_wrapper = dict(
     optimizer=dict(weight_decay=0.01),
@@ -187,6 +191,6 @@ optim_wrapper = dict(
 # You may need to download the model first is the network is unstable
 # load_from = 'https://download.openmmlab.com/mmdetection3d/pretrain_models/mvx_faster_rcnn_detectron2-caffe_20e_coco-pretrain_gt-sample_kitti-3-class_moderate-79.3_20200207-a4a6a3c7.pth'  # noqa
 
-resume = False
+resume = True
 
 work_dir = './work_dirs/MINERVA_mvxnet'
