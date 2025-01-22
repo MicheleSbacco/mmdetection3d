@@ -130,24 +130,10 @@ class SingleStage3DDetector(Base3DDetector):
                 - bboxes_3d (Tensor): Contains a tensor with shape
                     (num_instances, C) where C >=7.
         """
-        # Added lines to initialize the handler, for time computation
-        out_file = '/home/michele/code/michele_mmdet3d/data/minerva_polimove/inference_times.json'
-        handler = JSONHandler(out_file)
-        
-        x = self.extract_feat_test(batch_inputs_dict)                           # NOTE: Modified so that there is a difference between training and
-                                                                                #       testing phases
-
-        torch.cuda.synchronize()
-        begin = time.time()                                                             # Added for time computation (ONLY PREDICTION, NO TRAINING)
+        x = self.extract_feat(batch_inputs_dict)
         results_list = self.bbox_head.predict(x, batch_data_samples, **kwargs)
-        torch.cuda.synchronize()
-        end = time.time()                                                               # Added for time computation (ONLY PREDICTION, NO TRAINING)
         predictions = self.add_pred_to_datasample(batch_data_samples,
                                                   results_list)
-        
-        # Added line to handle the json file
-        handler.update_dictionary({'Post-processing delta_t': (end-begin)})
-        
         return predictions
 
     def _forward(self,
