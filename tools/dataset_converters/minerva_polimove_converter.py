@@ -257,7 +257,7 @@ def _create_reduced_point_cloud(data_path,
         # Get the path to the specific point cloud
         v_path = pc_info['velodyne_path']
         v_path = Path(data_path) / v_path
-        # Load the points on a vector --> Checked: the vector is a [n][4] array with n="number of LiDAR points"
+        # Load the points on a vector --> Checked: the vector is a [n][num_features] array with n="number of LiDAR points"
         points_v = np.fromfile(
             str(v_path), dtype=np.float32,
             count=-1).reshape([-1, num_features])
