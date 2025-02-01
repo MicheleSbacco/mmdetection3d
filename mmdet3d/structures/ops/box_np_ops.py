@@ -571,7 +571,14 @@ def remove_outside_points(points, rect, Trv2c, P2, image_shape):
     """
     # 5x faster than remove_outside_points_v1(2ms vs 10ms)
     C, R, T = projection_matrix_to_CRT_kitti(P2)
-    image_bbox = [0, 0, image_shape[1], image_shape[0]]
+    
+    # Define a x_pixel_margin to enlarge the pointcloud cone, needed for better
+    # performances of the network when the car is half-truncated
+    x_pixel_margin = 500
+
+    # New image_bbox defined with some margin
+    image_bbox = [0-x_pixel_margin, 0, image_shape[1]+x_pixel_margin, image_shape[0]]
+
     frustum = get_frustum(image_bbox, C)
     frustum -= T
     frustum = np.linalg.inv(R) @ frustum.T
