@@ -65,6 +65,9 @@ from demo.utils import group_training_dictionaries
 import os
 import re
 
+# Added imports to clean up memory
+import gc
+
 
 
 @METRICS.register_module()
@@ -234,8 +237,7 @@ class MinervaMetricLidar(BaseMetric):
             self.inferencer = LidarDet3DInferencer(model=self.model_path,
                                                    weights=weights_path,
                                                    want_losses=True,
-                                                   show_progress = False
-                                                   )
+                                                   show_progress = False)
             # Set the boolean back to false
             self.inferencer_needs_update = False
 
@@ -421,7 +423,9 @@ class MinervaMetricLidar(BaseMetric):
         self.bboxes = []
         # Reset the boolean for the initialization of the inferencer
         self.inferencer_needs_update = True
-        
+
+
+
         # Return the dictionary with "metric: value" for the "ugly" print
         return {'AP40 (3d metric)': ap40,
                 'Loss_cls':         loss_cls,
@@ -841,6 +845,10 @@ class MinervaMetricFusion(BaseMetric):
         self.bboxes = []
         # Reset the boolean for the initialization of the inferencer
         self.inferencer_needs_update = True
+        # Delete the inference to free up some memory
+        self.inferencer = None
+        torch.cuda.empty_cache()
+        gc.collect()
 
 
 

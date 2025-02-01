@@ -23,7 +23,7 @@
 dataset_type = 'MinervaCameraLidarDataset'
 data_root = 'data/minerva_polimove/'
 class_names = ['Car']
-point_cloud_range = [-70, -20, -2, 150, 20, 5]                  ## How to adjust? Use "tools/misc/browse_datase.py" after setting 
+point_cloud_range = [0, -24, -2, 128, 24, 4.8]                  ## How to adjust? Use "tools/misc/browse_datase.py" after setting 
                                                                 #  the line "PointsRangeFilter" in test_pipeline to NON-commented
 input_modality = dict(use_lidar=True, use_camera=True)
 metainfo = dict(classes=class_names)
@@ -43,7 +43,7 @@ db_sampler = dict(
     info_path=data_root + 'minerva_polimove_dbinfos_train.pkl',
     rate=1.0,
     prepare=dict(
-        filter_by_min_points=dict(Car=5)),
+        filter_by_min_points=dict(Car=10)),
     classes=class_names,
     sample_groups=dict(Car=15),
     points_loader=dict(
@@ -224,11 +224,11 @@ val_evaluator = dict(
     ann_file='data/minerva_polimove/minerva_polimove_infos_val.pkl',
     metric='bbox',
     lidar_path_prefix = '/home/michele/code/michele_mmdet3d/',                                              # Needs update!!!
-    model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/MINERVA_HardVox_mvxnet.py',                    # Needs update!!!
+    model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/MINERVA_mvxnet.py',                    # Needs update!!!
     last_chkpt_file_path = '/home/michele/code/michele_mmdet3d/work_dirs/MINERVA_mvxnet/last_checkpoint',   # Needs update!!!
     save_losses_on_file = True,
     losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json",
-    reduced_x_limit = [0, 80],
+    reduced_x_limit = [0, 70],
     delete_checkpoints = True,
     checkpoints_folder = '/home/michele/code/michele_mmdet3d/work_dirs/MINERVA_mvxnet/',
     save_checkpoints_one_every_n = 5,

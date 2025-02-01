@@ -35,8 +35,8 @@ sparse_shape_default=[41, 1600, 1408]
 #                   34 or it doesn't work (not even with 33)
 #
 # model settings --> MODIFIED
-voxel_size = [0.05, 0.05, 0.2]
-point_cloud_range = [0, -28, -2, 120, 28, 4.8]
+voxel_size = [0.1, 0.1, 0.2]
+point_cloud_range = [0, -24, -2, 128, 24, 4.8]
 sparse_shape_default=[
     int((point_cloud_range[5]-point_cloud_range[2])/voxel_size[2]),     # z dimension
     int((point_cloud_range[4]-point_cloud_range[1])/voxel_size[1]),     # y dimension
@@ -44,7 +44,7 @@ sparse_shape_default=[
 
 model = dict(
     type='DynamicMVXFasterRCNN',
-    save_losses_on_file = False,
+    save_losses_on_file = True,
     losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json",
     data_preprocessor=dict(
         type='Det3DDataPreprocessor',
@@ -177,7 +177,7 @@ model = dict(
             nms_pre=100,
             max_num=50)))
 
-train_cfg = dict(max_epochs=300, val_interval=100)
+train_cfg = dict(max_epochs=80, val_interval=1)
 
 optim_wrapper = dict(
     optimizer=dict(weight_decay=0.01),
@@ -186,6 +186,7 @@ optim_wrapper = dict(
 
 # You may need to download the model first is the network is unstable
 # load_from = 'https://download.openmmlab.com/mmdetection3d/pretrain_models/mvx_faster_rcnn_detectron2-caffe_20e_coco-pretrain_gt-sample_kitti-3-class_moderate-79.3_20200207-a4a6a3c7.pth'  # noqa
+load_from = '/home/michele/code/michele_mmdet3d/work_dirs/MINERVA_mvxnet/epoch_180.pth'  # noqa
 
 resume = False
 
