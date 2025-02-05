@@ -28,7 +28,7 @@ db_sampler = dict(
     prepare=dict(
         filter_by_difficulty=[
             -1,
-        ], filter_by_min_points=dict(Car=15)),
+        ], filter_by_min_points=dict(Car=5)),
     rate=1.0,
     sample_groups=dict(Car=15))
 default_hooks = dict(
@@ -457,7 +457,7 @@ train_dataloader = dict(
                             filter_by_difficulty=[
                                 -1,
                             ],
-                            filter_by_min_points=dict(Car=15)),
+                            filter_by_min_points=dict(Car=5)),
                         rate=1.0,
                         sample_groups=dict(Car=15)),
                     use_ground_plane=False,
@@ -551,7 +551,7 @@ train_pipeline = [
             prepare=dict(
                 filter_by_difficulty=[
                     -1,
-                ], filter_by_min_points=dict(Car=15)),
+                ], filter_by_min_points=dict(Car=5)),
             rate=1.0,
             sample_groups=dict(Car=15)),
         use_ground_plane=False,
