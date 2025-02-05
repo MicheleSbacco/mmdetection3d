@@ -157,7 +157,17 @@ model = dict(
             ]),
         voxel_type = 'dynamic'),
     middle_encoder=dict(
-        in_channels=64, output_shape=[
+        in_channels=64, 
+        # Both dimensions must be "dividable" by 8.
+        # The reason is the same as MVX-Net:
+        #   - The canvas is downsampled 3 times ( /2, /4, /8 )
+        #   - Then it is upsampled at "/2" from the original for all cases
+        #   - Problem is:
+        #       - if the shape is e.g. 1250 then it is downsampled with
+        #         an APPROXIMATION as (625, 313, 157)
+        #       - then the upsampling makes it (625, 626, 628) so the
+        #         concatenation is not possible
+        output_shape=[
             400,
             1600,
         ], type='PointPillarsScatter'),
@@ -304,7 +314,7 @@ point_cloud_range=[
     28.8,
     5,
 ]
-resume = True
+resume = False
 test_cfg = dict()
 test_dataloader = dict(
     batch_size=1,
@@ -370,7 +380,7 @@ test_evaluator = dict(
     # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
     save_losses_on_file = True,
     losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json",
-    reduced_x_limit = [-40, 80],
+    reduced_x_limit = [0, 70],
     type='MinervaMetricLidar')
 test_pipeline = [
     dict(coord_type='LIDAR', load_dim=4, type='LoadPointsFromFile', use_dim=4),
@@ -406,7 +416,7 @@ test_pipeline = [
 ]
 train_cfg = dict(by_epoch=True, max_epochs=120, val_interval=1)
 train_dataloader = dict(
-    batch_size=1,
+    batch_size=2,
     dataset=dict(
         dataset=dict(
             ann_file='minerva_polimove_infos_train.pkl',
@@ -641,7 +651,7 @@ val_evaluator = dict(
     # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
     save_losses_on_file = True,
     losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json",
-    reduced_x_limit = [-40, 80],
+    reduced_x_limit = [0, 70],
     type='MinervaMetricLidar')
 vis_backends = [
     dict(type='LocalVisBackend'),

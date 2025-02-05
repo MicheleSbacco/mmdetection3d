@@ -375,12 +375,12 @@ test_evaluator = dict(
     ann_file='data/minerva_polimove_cones/minerva_polimove_cones_infos_val.pkl',
     metric='bbox',
     lidar_path_prefix = '/home/michele/ode/michele_mmdet3d/',   # Needs update!!!
-    model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/CONDENSED-DYNAMIC_pointpillars_minerva.py',    # Needs update!!!
-    last_chkpt_file_path = '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint', # Needs update!!!
+    model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/CONE-SHAPED-DYNAMIC_pointpillars_minerva.py',    # Needs update!!!
+    last_chkpt_file_path = '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva_cone_shaped/last_checkpoint', # Needs update!!!
     # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
     save_losses_on_file = True,
     losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json",
-    reduced_x_limit = [-40, 80],
+    reduced_x_limit = [0, 70],
     type='MinervaMetricLidar')
 test_pipeline = [
     dict(coord_type='LIDAR', load_dim=4, type='LoadPointsFromFile', use_dim=4),
@@ -416,7 +416,7 @@ test_pipeline = [
 ]
 train_cfg = dict(by_epoch=True, max_epochs=120, val_interval=1)
 train_dataloader = dict(
-    batch_size=1,
+    batch_size=2,
     dataset=dict(
         dataset=dict(
             ann_file='minerva_polimove_cones_infos_train.pkl',
@@ -647,11 +647,11 @@ val_evaluator = dict(
     metric='bbox',
     lidar_path_prefix = '/home/michele/code/michele_mmdet3d/',  # Needs update!!!
     model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/CONE-SHAPED-DYNAMIC_pointpillars_minerva.py',    # Needs update!!!
-    last_chkpt_file_path = '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint', # Needs update!!!
+    last_chkpt_file_path = '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva_cone_shaped/last_checkpoint', # Needs update!!!
     # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
     save_losses_on_file = True,
     losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json",
-    reduced_x_limit = [0, 150],
+    reduced_x_limit = [0, 70],
     type='MinervaMetricLidar')
 vis_backends = [
     dict(type='LocalVisBackend'),
@@ -667,4 +667,4 @@ voxel_size = [
     0.16,
     7,
 ]
-work_dir = './work_dirs/pointpillars_minerva'
+work_dir = './work_dirs/pointpillars_minerva_cone_shaped'
