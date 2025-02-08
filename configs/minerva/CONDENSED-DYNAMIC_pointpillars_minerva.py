@@ -2,7 +2,7 @@ anchor_range = [
     -90,
     -28.8,
     -1,
-    166,
+    191.6,
     28.8,
     -1,
 ]
@@ -94,7 +94,7 @@ model = dict(
                     -90,
                     -28.8,
                     -1,
-                    166,
+                    191.6,
                     28.8,
                     -1,
                 ],
@@ -146,7 +146,7 @@ model = dict(
                 -90,
                 -28.8,
                 -2,
-                166,
+                191.6,
                 28.8,
                 5,
             ],
@@ -168,8 +168,8 @@ model = dict(
         #       - then the upsampling makes it (625, 626, 628) so the
         #         concatenation is not possible
         output_shape=[
-            400,
-            1600,
+            360,
+            1760,
         ], type='PointPillarsScatter'),
     neck=dict(
         in_channels=[
@@ -223,7 +223,7 @@ model = dict(
             -90,
             -28.8,
             -2,
-            166,
+            191.6,
             28.8,
             5,
         ],
@@ -262,7 +262,7 @@ param_scheduler = [
     dict(
         type='CosineAnnealingLR',
         T_max=24,
-        eta_min=1.0000000000000001e-10,
+        eta_min=0.01,
         begin=60,
         end=84,
         by_epoch=True,
@@ -270,7 +270,7 @@ param_scheduler = [
     dict(
         type='CosineAnnealingLR',
         T_max=36,
-        eta_min=1.0000000000000001e-13,
+        eta_min=1.0000000000000001e-07,
         begin=84,
         end=120,
         by_epoch=True,
@@ -296,7 +296,7 @@ param_scheduler = [
         by_epoch=True,
         convert_to_iter_based=True,
         end=84,
-        eta_min=1,
+        eta_min=0.8947368421052632,
         type='CosineAnnealingMomentum'),
     dict(
         T_max=36,
@@ -310,7 +310,7 @@ point_cloud_range=[
     -90,
     -28.8,
     -2,
-    166,
+    191.6,
     28.8,
     5,
 ]
@@ -494,7 +494,7 @@ train_dataloader = dict(
                         -90,
                         -28.8,
                         -2,
-                        166,
+                        191.6,
                         28.8,
                         5,
                     ],
@@ -504,7 +504,7 @@ train_dataloader = dict(
                         -90,
                         -28.8,
                         -2,
-                        166,
+                        191.6,
                         28.8,
                         5,
                     ],
@@ -588,7 +588,7 @@ train_pipeline = [
             -90,
             -28.8,
             -2,
-            166,
+            191.6,
             28.8,
             5,
         ],
@@ -598,7 +598,7 @@ train_pipeline = [
             -90,
             -28.8,
             -2,
-            166,
+            191.6,
             28.8,
             5,
         ],
