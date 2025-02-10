@@ -1,8 +1,8 @@
 anchor_range = [
-    -90,
+    0,
     -28.8,
     -1,
-    191.6,
+    192,
     28.8,
     -1,
 ]
@@ -10,15 +10,15 @@ auto_scale_lr = dict(base_batch_size=50, enable=False)
 class_names = [
     'Car',
 ]
-data_root = 'data/minerva_polimove_cones_augmented/'
+data_root = 'data/minerva_polimove_cones_augmented_only/'
 dataset_type = 'MinervaLidarOnlyDataset'
 db_sampler = dict(
     backend_args=None,
     classes=[
         'Car',
     ],
-    data_root='data/minerva_polimove_cones_augmented/',
-    info_path='data/minerva_polimove_cones_augmented/minerva_polimove_cones_augmented_dbinfos_train.pkl',
+    data_root='data/minerva_polimove_cones_augmented_only/',
+    info_path='data/minerva_polimove_cones_augmented_only/minerva_polimove_cones_augmented_only_dbinfos_train.pkl',
     points_loader=dict(
         backend_args=None,
         coord_type='LIDAR',
@@ -61,7 +61,6 @@ eval_pipeline = [
 ]
 input_modality = dict(use_camera=False, use_lidar=True)
 launcher = 'none'
-load_from = None
 log_level = 'INFO'
 log_processor = dict(by_epoch=True, type='LogProcessor', window_size=50)
 lr = 0.001
@@ -91,10 +90,10 @@ model = dict(
         anchor_generator=dict(
             ranges=[
                 [
-                    -90,
+                    0,
                     -28.8,
                     -1,
-                    191.6,
+                    192,
                     28.8,
                     -1,
                 ],
@@ -133,20 +132,20 @@ model = dict(
         type='Anchor3DHead',
         use_direction_classifier=True),
     data_preprocessor=dict(
-        type='Det3DDataPreprocessor',   # This actually MUST be different: -1's are fundamental
+        type='Det3DDataPreprocessor',
         voxel=True,
         voxel_layer=dict(
-            deterministic = True,   # Dynamic Voxelization is NOT affected by this parameter (also tested)
-            max_num_points=-1,
+            deterministic = True,
+            max_num_points=96,
             max_voxels=(
-                -1,
-                -1,
+                100000,
+                100000,
             ),
             point_cloud_range=[
-                -90,
+                0,
                 -28.8,
                 -2,
-                191.6,
+                192,
                 28.8,
                 5,
             ],
@@ -155,7 +154,7 @@ model = dict(
                 0.16,
                 7,
             ]),
-        voxel_type = 'dynamic'),
+        voxel_type = 'hard'),
     middle_encoder=dict(
         in_channels=64, 
         # Both dimensions must be "dividable" by 8.
@@ -169,7 +168,7 @@ model = dict(
         #         concatenation is not possible
         output_shape=[
             360,
-            1760,
+            1200,
         ], type='PointPillarsScatter'),
     neck=dict(
         in_channels=[
@@ -210,24 +209,21 @@ model = dict(
     # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
     save_losses_on_file = True,
     losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json", 
-    type='DynamicVoxelNet',
-    # ADD PAREMETER: dynamic_voxelization 
-    #   - to make the Det3DDataPreprocessor dynamic
-    #   - to make the PillarFeatureNet into DynamicPillarFeatureNet
+    type='VoxelNet',
     voxel_encoder=dict(
         feat_channels=[
             64,
         ],
         in_channels=5,
         point_cloud_range=[
-            -90,
+            0,
             -28.8,
             -2,
-            191.6,
+            192,
             28.8,
             5,
         ],
-        type='DynamicPillarFeatureNet', # This is the same as the HARD version
+        type='PillarFeatureNet',
         voxel_size=[
             0.16,
             0.16,
@@ -307,10 +303,10 @@ param_scheduler = [
         type='CosineAnnealingMomentum'),
 ]
 point_cloud_range=[
-    -90,
+    0,
     -28.8,
     -2,
-    191.6,
+    192,
     28.8,
     5,
 ]
@@ -319,10 +315,10 @@ test_cfg = dict()
 test_dataloader = dict(
     batch_size=1,
     dataset=dict(
-        ann_file='minerva_polimove_cones_augmented_infos_val.pkl',
+        ann_file='minerva_polimove_cones_augmented_only_infos_val.pkl',
         box_type_3d='LiDAR',
         data_prefix=dict(pts='training/velodyne'),
-        data_root='data/minerva_polimove_cones_augmented/',
+        data_root='data/minerva_polimove_cones_augmented_only/',
         metainfo=dict(classes=[
             'Car',
         ]),
@@ -372,10 +368,10 @@ test_dataloader = dict(
     persistent_workers=True,
     sampler=dict(shuffle=False, type='DefaultSampler'))
 test_evaluator = dict(
-    ann_file='data/minerva_polimove_cones_augmented/minerva_polimove_cones_augmented_infos_val.pkl',
+    ann_file='data/minerva_polimove_cones_augmented_only/minerva_polimove_cones_augmented_only_infos_val.pkl',
     metric='bbox',
     lidar_path_prefix = '/home/michele/code/michele_mmdet3d/',  # Needs update!!!
-    model_path = '/home/michele/ode/michele_mmdet3d/configs/minerva/CONE-AUGMENTED-DYNAMIC_pointpillars_minerva.py',    # Needs update!!!
+    model_path = '/home/michele/ode/michele_mmdet3d/configs/minerva/CONE-AUGMENTED-HARD_pointpillars_minerva.py',    # Needs update!!!
     last_chkpt_file_path = '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva_cone_augmented/last_checkpoint', # Needs update!!!
     # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
     save_losses_on_file = True,
@@ -419,10 +415,10 @@ train_dataloader = dict(
     batch_size=2,
     dataset=dict(
         dataset=dict(
-            ann_file='minerva_polimove_cones_augmented_infos_train.pkl',
+            ann_file='minerva_polimove_cones_augmented_only_infos_train.pkl',
             box_type_3d='LiDAR',
             data_prefix=dict(pts='training/velodyne'),
-            data_root='data/minerva_polimove_cones_augmented/',
+            data_root='data/minerva_polimove_cones_augmented_only/',
             metainfo=dict(classes=[
                 'Car',
             ]),
@@ -444,9 +440,9 @@ train_dataloader = dict(
                         classes=[
                             'Car',
                         ],
-                        data_root='data/minerva_polimove_cones_augmented/',
+                        data_root='data/minerva_polimove_cones_augmented_only/',
                         info_path=
-                        'data/minerva_polimove_cones_augmented/minerva_polimove_cones_augmented_dbinfos_train.pkl',
+                        'data/minerva_polimove_cones_augmented_only/minerva_polimove_cones_augmented_only_dbinfos_train.pkl',
                         points_loader=dict(
                             backend_args=None,
                             coord_type='LIDAR',
@@ -491,20 +487,20 @@ train_dataloader = dict(
                     type='GlobalRotScaleTrans'),
                 dict(
                     point_cloud_range=[
-                        -90,
+                        0,
                         -28.8,
                         -2,
-                        191.6,
+                        192,
                         28.8,
                         5,
                     ],
                     type='PointsRangeFilter'),
                 dict(
                     point_cloud_range=[
-                        -90,
+                        0,
                         -28.8,
                         -2,
-                        191.6,
+                        192,
                         28.8,
                         5,
                     ],
@@ -539,9 +535,9 @@ train_pipeline = [
             classes=[
                 'Car',
             ],
-            data_root='data/minerva_polimove_cones_augmented/',
+            data_root='data/minerva_polimove_cones_augmented_only/',
             info_path=
-            'data/minerva_polimove_cones_augmented/minerva_polimove_cones_augmented_dbinfos_train.pkl',
+            'data/minerva_polimove_cones_augmented_only/minerva_polimove_cones_augmented_only_dbinfos_train.pkl',
             points_loader=dict(
                 backend_args=None,
                 coord_type='LIDAR',
@@ -585,20 +581,20 @@ train_pipeline = [
         type='GlobalRotScaleTrans'),
     dict(
         point_cloud_range=[
-            -90,
+            0,
             -28.8,
             -2,
-            191.6,
+            192,
             28.8,
             5,
         ],
         type='PointsRangeFilter'),
     dict(
         point_cloud_range=[
-            -90,
+            0,
             -28.8,
             -2,
-            191.6,
+            192,
             28.8,
             5,
         ],
@@ -616,10 +612,10 @@ val_cfg = dict()
 val_dataloader = dict(
     batch_size=1,
     dataset=dict(
-        ann_file='minerva_polimove_cones_augmented_infos_val.pkl',
+        ann_file='minerva_polimove_cones_augmented_only_infos_val.pkl',
         box_type_3d='LiDAR',
         data_prefix=dict(pts='training/velodyne'),
-        data_root='data/minerva_polimove_cones_augmented/',
+        data_root='data/minerva_polimove_cones_augmented_only/',
         metainfo=dict(classes=[
             'Car',
         ]),
@@ -643,10 +639,10 @@ val_dataloader = dict(
     persistent_workers=True,
     sampler=dict(shuffle=False, type='DefaultSampler'))
 val_evaluator = dict(
-    ann_file='data/minerva_polimove_cones_augmented/minerva_polimove_cones_augmented_infos_val.pkl',
+    ann_file='data/minerva_polimove_cones_augmented_only/minerva_polimove_cones_augmented_only_infos_val.pkl',
     metric='bbox',
     lidar_path_prefix = '/home/michele/code/michele_mmdet3d/',  # Needs update!!!
-    model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/CONE-AUGMENTED-DYNAMIC_pointpillars_minerva.py',    # Needs update!!!
+    model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/CONE-AUGMENTED-HARD_pointpillars_minerva.py',    # Needs update!!!
     last_chkpt_file_path = '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva_cone_augmented/last_checkpoint', # Needs update!!!
     # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
     save_losses_on_file = True,
@@ -667,4 +663,7 @@ voxel_size = [
     0.16,
     7,
 ]
-work_dir = './work_dirs/pointpillars_minerva_cone_augmented'
+
+load_from = "mettere qui la epoch giusta"
+
+work_dir = './work_dirs/pointpillars_minerva_cone_augmented_only'

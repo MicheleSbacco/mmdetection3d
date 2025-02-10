@@ -1,8 +1,8 @@
 anchor_range = [
-    0,
+    -90,
     -28.8,
     -1,
-    192,
+    191.6,
     28.8,
     -1,
 ]
@@ -91,10 +91,10 @@ model = dict(
         anchor_generator=dict(
             ranges=[
                 [
-                    0,
+                    -90,
                     -28.8,
                     -1,
-                    192,
+                    191.6,
                     28.8,
                     -1,
                 ],
@@ -137,16 +137,16 @@ model = dict(
         voxel=True,
         voxel_layer=dict(
             deterministic = True,
-            max_num_points=96,
+            max_num_points=32,
             max_voxels=(
-                100000,
-                100000,
+                20000,
+                40000,
             ),
             point_cloud_range=[
-                0,
+                -90,
                 -28.8,
                 -2,
-                192,
+                191.6,
                 28.8,
                 5,
             ],
@@ -168,8 +168,8 @@ model = dict(
         #       - then the upsampling makes it (625, 626, 628) so the
         #         concatenation is not possible
         output_shape=[
-            400,
-            1200,
+            360,
+            1760,
         ], type='PointPillarsScatter'),
     neck=dict(
         in_channels=[
@@ -217,10 +217,10 @@ model = dict(
         ],
         in_channels=5,
         point_cloud_range=[
-            0,
+            -90,
             -28.8,
             -2,
-            192,
+            191.6,
             28.8,
             5,
         ],
@@ -304,10 +304,10 @@ param_scheduler = [
         type='CosineAnnealingMomentum'),
 ]
 point_cloud_range=[
-    0,
+    -90,
     -28.8,
     -2,
-    192,
+    191.6,
     28.8,
     5,
 ]
@@ -413,7 +413,7 @@ test_pipeline = [
 ]
 train_cfg = dict(by_epoch=True, max_epochs=120, val_interval=1)
 train_dataloader = dict(
-    batch_size=2,
+    batch_size=1,
     dataset=dict(
         dataset=dict(
             ann_file='minerva_polimove_cones_augmented_infos_train.pkl',
@@ -488,20 +488,20 @@ train_dataloader = dict(
                     type='GlobalRotScaleTrans'),
                 dict(
                     point_cloud_range=[
-                        0,
+                        -90,
                         -28.8,
                         -2,
-                        192,
+                        191.6,
                         28.8,
                         5,
                     ],
                     type='PointsRangeFilter'),
                 dict(
                     point_cloud_range=[
-                        0,
+                        -90,
                         -28.8,
                         -2,
-                        192,
+                        191.6,
                         28.8,
                         5,
                     ],
@@ -582,20 +582,20 @@ train_pipeline = [
         type='GlobalRotScaleTrans'),
     dict(
         point_cloud_range=[
-            0,
+            -90,
             -28.8,
             -2,
-            192,
+            191.6,
             28.8,
             5,
         ],
         type='PointsRangeFilter'),
     dict(
         point_cloud_range=[
-            0,
+            -90,
             -28.8,
             -2,
-            192,
+            191.6,
             28.8,
             5,
         ],
