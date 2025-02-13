@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from scipy.stats import norm
 import numpy as np
+import matplotlib.cm as cm
 
 
 
@@ -77,13 +78,28 @@ def plot_pie_chart(values_1, values_2, values_3, label_1, label_2, label_3):
 
 
 
-def plot_losses_metrics(epochs, training_losses, validation_losses, metric_ap40, metric_ap40_reduced, top_y_lim = None, x_lim=None):
+def plot_losses_metrics(epochs, training_losses, validation_losses, metric_ap40, metric_ap40_reduced_array, reduced_x_limit_array, list_of_reductions_shown=[0], top_y_lim = None, x_lim=None):
+
+    # Define the number of colors
+    num_of_colors = len(list_of_reductions_shown)+2
+    # Generate a color gradient from red to black
+    color_map = []
+    for i in range(num_of_colors-1, -1, -1):
+        color_map.append( (i / (num_of_colors - 1), 0, 0) )
+
     # Plot the training and validation losses
     plt.figure(figsize=(15, 10))
-    plt.plot(epochs, training_losses, 'b-', marker='o', label='Training Loss')  # Blue line for training
-    plt.plot(epochs, validation_losses, 'r-', marker='o', label='Validation Loss')  # Red line for validation
-    plt.plot(epochs, metric_ap40, 'k-', marker='o', label='Metric: 3D AP40')  # Black line for ap40
-    plt.plot(epochs, metric_ap40_reduced, 'g-', marker='o', label=f'Metric: 3D AP40$_{{\\mathrm{{reduced}}}}$')  # Green line for ap40
+    plt.plot(epochs, training_losses, color='black', marker='o', label='Training Loss')  # Black line for training
+    plt.plot(epochs, validation_losses, color='#32CD32', marker='o', label='Validation Loss')  # Green line for validation
+
+    # Plot the complete AP40
+    plt.plot(epochs, metric_ap40, color='blue', marker='o', label='Metric: 3D AP40')  # Blue line for ap40
+
+    # Lines for AP40_reduced in shades from red to black
+    metric_ap40_reduced_array = np.array(metric_ap40_reduced_array)
+    for i, ap40_index in enumerate(list_of_reductions_shown):
+        plt.plot(epochs, metric_ap40_reduced_array[:, ap40_index], color=color_map[i], marker='o',
+                 label = f"Metric: 3D AP40$_{{[{reduced_x_limit_array[ap40_index][0]}, {reduced_x_limit_array[ap40_index][1]}]}}$")
 
     # Set axes to start from 0
     plt.xlim(left=0)
@@ -107,23 +123,30 @@ def plot_losses_metrics(epochs, training_losses, validation_losses, metric_ap40,
 
     # Add annotations for each point (training)
     for i, loss in enumerate(training_losses):
-        plt.annotate(f'{loss:.2f}', (epochs[i], training_losses[i]), textcoords="offset points", xytext=(-8,-5), ha='center', fontsize=fontsize_annotations, color='blue')
+        plt.annotate(f'{loss:.2f}', (epochs[i], training_losses[i]), textcoords="offset points", xytext=(-8,-5), ha='center', fontsize=fontsize_annotations, color='black')
 
     # Add annotations for each point (validation)
     for i, loss in enumerate(validation_losses):
-        plt.annotate(f'{loss:.2f}', (epochs[i], validation_losses[i]), textcoords="offset points", xytext=(-8, 5), ha='center', fontsize=fontsize_annotations, color='red')
+        plt.annotate(f'{loss:.2f}', (epochs[i], validation_losses[i]), textcoords="offset points", xytext=(-8, 5), ha='center', fontsize=fontsize_annotations, color='#32CD32')
 
     # Add annotations for each point (ap40 metric)
     for i, ap40 in enumerate(metric_ap40):
         if (ap40/training_losses[i]>superposition_upper_limit or ap40/training_losses[i]<superposition_lower_limit) and (ap40/validation_losses[i]>superposition_upper_limit or ap40/validation_losses[i]<superposition_lower_limit):
-            plt.annotate(f'{ap40:.2f}', (epochs[i], metric_ap40[i]), textcoords="offset points", xytext=(0,7), ha='center', fontsize=fontsize_annotations, color='black')
+            plt.annotate(f'{ap40:.2f}', (epochs[i], metric_ap40[i]), textcoords="offset points", xytext=(0,-10), ha='center', fontsize=fontsize_annotations, color='blue')
         else:
             plt.annotate(f'', (epochs[i], metric_ap40[i]))
 
-    # Add annotations for each point (ap40_reduced metric)
-    for i, ap40_r in enumerate(metric_ap40_reduced):
+    # Add annotations for each point (first element of the ap40_reduced metric)
+    for i, ap40_r in enumerate(metric_ap40_reduced_array[:, 0].tolist()):
         if (ap40_r/training_losses[i]>superposition_upper_limit or ap40_r/training_losses[i]<superposition_lower_limit) and (ap40_r/validation_losses[i]>superposition_upper_limit or ap40_r/validation_losses[i]<superposition_lower_limit):
-            plt.annotate(f'{ap40_r:.2f}', (epochs[i], metric_ap40_reduced[i]), textcoords="offset points", xytext=(0,7), ha='center', fontsize=fontsize_annotations, color='green')
+            plt.annotate(f'{ap40_r:.2f}', (epochs[i], metric_ap40_reduced_array[:, 0].tolist()[i]), textcoords="offset points", xytext=(0,-10), ha='center', fontsize=fontsize_annotations, color=color_map[0])
+        else:
+            plt.annotate(f'', (epochs[i], metric_ap40[i]))
+
+    # Add annotations for each point (last element of the ap40_reduced metric)
+    for i, ap40_r in enumerate(metric_ap40_reduced_array[:, list_of_reductions_shown[-1]].tolist()):
+        if (ap40_r/training_losses[i]>superposition_upper_limit or ap40_r/training_losses[i]<superposition_lower_limit) and (ap40_r/validation_losses[i]>superposition_upper_limit or ap40_r/validation_losses[i]<superposition_lower_limit):
+            plt.annotate(f'{ap40_r:.2f}', (epochs[i], metric_ap40_reduced_array[:, list_of_reductions_shown[-1]].tolist()[i]), textcoords="offset points", xytext=(0,-10), ha='center', fontsize=fontsize_annotations, color=color_map[len(list_of_reductions_shown)-1])
         else:
             plt.annotate(f'', (epochs[i], metric_ap40[i]))
 

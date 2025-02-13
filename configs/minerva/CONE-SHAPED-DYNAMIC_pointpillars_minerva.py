@@ -319,7 +319,7 @@ test_cfg = dict()
 test_dataloader = dict(
     batch_size=1,
     dataset=dict(
-        ann_file='minerva_polimove_cones_infos_val.pkl',
+        ann_file='minerva_polimove_cones_infos_train.pkl',
         box_type_3d='LiDAR',
         data_prefix=dict(pts='training/velodyne'),
         data_root='data/minerva_polimove_cones/',
@@ -372,15 +372,41 @@ test_dataloader = dict(
     persistent_workers=True,
     sampler=dict(shuffle=False, type='DefaultSampler'))
 test_evaluator = dict(
-    ann_file='data/minerva_polimove_cones/minerva_polimove_cones_infos_val.pkl',
+    ann_file='data/minerva_polimove_cones/minerva_polimove_cones_infos_train.pkl',
     metric='bbox',
-    lidar_path_prefix = '/home/michele/ode/michele_mmdet3d/',   # Needs update!!!
+    lidar_path_prefix = '/home/michele/code/michele_mmdet3d/',   # Needs update!!!
     model_path = '/home/michele/code/michele_mmdet3d/configs/minerva/CONE-SHAPED-DYNAMIC_pointpillars_minerva.py',    # Needs update!!!
     last_chkpt_file_path = '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva_cone_shaped/last_checkpoint', # Needs update!!!
     # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
     save_losses_on_file = True,
     losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json",
-    reduced_x_limit = [0, 70],
+    reduced_x_limit = [
+        # Whole paths
+        [0, 70],
+        [0, 80],
+        [0, 90],
+        [0, 100],
+        [0, 110],
+        [0, 120],
+        [0, 130],
+        [0, 140],
+        [0, 150],
+        # Partial paths
+        [70, 80],
+        [80, 90],
+        [90, 100],
+        [100, 110],
+        [110, 120],
+        [120, 130],
+        [130, 140],
+        [140, 150]
+    ],
+    # Added stuff to:
+    #   - enable to do the testing on the "train" dataset
+    #   - insert the checkpoint in a direct way (not going through the "last_checkpoint.txt" file)
+    #   - save the results in a different file
+    testing_mode = True,
+    testing_reference_folder = "/home/michele/code/Presentation_results/PPillars_Checkpoints/Cone-Shaped_DynamicVox/",
     type='MinervaMetricLidar')
 test_pipeline = [
     dict(coord_type='LIDAR', load_dim=4, type='LoadPointsFromFile', use_dim=4),
@@ -651,7 +677,27 @@ val_evaluator = dict(
     # MUST ADD PARAMETER TO SET THE SAME AS VALIDATION INTERVAL
     save_losses_on_file = True,
     losses_file_destination_path = "/home/michele/code/michele_mmdet3d/demo/losses_log.json",
-    reduced_x_limit = [0, 70],
+    reduced_x_limit = [
+        # Whole paths
+        [0, 70],
+        [0, 80],
+        [0, 90],
+        [0, 100],
+        [0, 110],
+        [0, 120],
+        [0, 130],
+        [0, 140],
+        [0, 150],
+        # Partial paths
+        [70, 80],
+        [80, 90],
+        [90, 100],
+        [100, 110],
+        [110, 120],
+        [120, 130],
+        [130, 140],
+        [140, 150]
+    ],
     type='MinervaMetricLidar')
 vis_backends = [
     dict(type='LocalVisBackend'),

@@ -124,7 +124,11 @@ class MinervaMetricLidar(BaseMetric):
                  '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint',
                  save_losses_on_file = False,                                   # Added argument to save the losses on a .json file
                  losses_file_destination_path = None,                           # Added argument to save the losses on a .json file
-                 reduced_x_limit = [-40, 80]                                    # To count less false negatives (when gt_bbox is too far)
+                 reduced_x_limit = [[-40, 80]],                                 # To count less false negatives (when gt_bbox is too far)
+
+                 # Added arguments to test on the "training" dataset
+                 testing_mode = False,
+                 testing_reference_folder = ""
 
                             #####################################################
                             ##                                                 ##
@@ -133,7 +137,7 @@ class MinervaMetricLidar(BaseMetric):
                             ##  "test_evaluator" config.                       ##
                             ##                                                 ##
                             #####################################################
-                 
+
                  ) -> None:
         self.default_prefix = 'MinervaLidarOnly'
         super(MinervaMetricLidar, self).__init__(
@@ -158,7 +162,7 @@ class MinervaMetricLidar(BaseMetric):
             if metric not in allowed_metrics:
                 raise KeyError("metric should be one of 'bbox', 'img_bbox', "
                                f'but got {metric}.')
-        
+
         # Initialize self.results to avoid receiving a warning from the parent class "BaseMetric"
         self.results = [{}]
         # Initialize the variable that will contain the bboxes for the evaluation of the AP40
@@ -177,15 +181,29 @@ class MinervaMetricLidar(BaseMetric):
         self.lidar_path_prefix = lidar_path_prefix
         self.model_path = model_path
         self.last_chkpt_file_path = last_chkpt_file_path
+
+        # Added parameters for the evaluation on the training dataset
+        self.testing_mode = testing_mode
+        if self.testing_mode:
+            self.testing_reference_folder = testing_reference_folder
+            # Add check to point out that the indicated folder is empty
+            if self.testing_reference_folder == "":
+                raise ValueError("The indicated value for \"testing_reference_folder\" is empty. Exiting...")
+
         # Added initialization to save losses on a .json file
         self.save_losses_on_file = save_losses_on_file
         if self.save_losses_on_file:
-            if losses_file_destination_path == None:
-                print("\n\n###########################################\
-                      \n#    Losses destination file is None!!    #\
-                      \n###########################################\n\n")
-                exit()
-            self.handler = JSONHandler(losses_file_destination_path)
+            #   1. Case when VALIDATING
+            if not self.testing_mode:
+                if losses_file_destination_path == None:
+                    print("\n\n###########################################\
+                        \n#    Losses destination file is None!!    #\
+                        \n###########################################\n\n")
+                    exit()
+                self.handler = JSONHandler(losses_file_destination_path)
+            #   2. Case when TESTING
+            else:
+                self.handler = JSONHandler(os.path.join(self.testing_reference_folder, "train_dataset_evaluation.json"))
         # Added parameter for the reduction in the count of false negatives
         self.reduced_x_limit = reduced_x_limit
 
@@ -230,9 +248,17 @@ class MinervaMetricLidar(BaseMetric):
 
         ############################### INITIALIZE INFERENCER ###############################
         if self.inferencer_needs_update:
+
             # Read the path to the most recent weights
-            with open(self.last_chkpt_file_path, 'r') as file:
-                weights_path = file.readline().strip()
+            #   1. Case when VALIDATING
+            if not self.testing_mode:
+                with open(self.last_chkpt_file_path, 'r') as file:
+                    weights_path = file.readline().strip()
+            #   2. Case when TESTING
+            else:
+                with open(os.path.join(self.testing_reference_folder, "best_epoch.txt"), 'r') as file:
+                    weights_path = file.readline().strip()
+
             # Initialize the inferencer
             self.inferencer = LidarDet3DInferencer(model=self.model_path,
                                                    weights=weights_path,
@@ -278,7 +304,7 @@ class MinervaMetricLidar(BaseMetric):
         # Create the right input for the inferencer
         input = self.lidar_path_prefix + data_sample['lidar_path']
         input = dict(points=input)
-        
+
         # Compute the losses with the inferencer, and add them to the dictionary
         losses = self.inferencer(input, gt_bboxes=new_InstanceData)
         new_dictionary['losses'] = losses
@@ -323,6 +349,11 @@ class MinervaMetricLidar(BaseMetric):
 
         ############################################# NORMAL AP40 #############################################
 
+        # Print for the TESTING case
+        if self.testing_mode:
+            print("\n--------------------------------------------------------------------")
+            print(f"Computing standard AP40...")
+
         # Create empty lists for precision and recall
         precisions = []
         recalls = []
@@ -342,20 +373,37 @@ class MinervaMetricLidar(BaseMetric):
 
         ############################################# REDUCED AP40 #############################################
 
-        # Create empty lists for precision and recall
-        precisions_reduced = []
-        recalls_reduced = []
-        # Compute the precision and recall for the scan.
-        # Do it for each value inside the list "self.iou_threshold_list" to have more data
-        for iou_value in self.iou_threshold_list:
-            precision, recall = self.compute_precision_recall(iou_value, self.reduced_x_limit)
-            precisions_reduced.append(precision)
-            recalls_reduced.append(recall)
-        # Aggregate all precision-recall values into a single curve
-        precisions_reduced = np.array(sorted(precisions_reduced, reverse=True))
-        recalls_reduced = np.array(sorted(recalls_reduced))
-        # Compute AP40
-        ap40_reduced = self.compute_ap40(precisions_reduced, recalls_reduced)
+        precisions_reduced_array = []
+        recalls_reduced_array = []
+        ap_40_reduced_array = []
+        for i, x_limit in enumerate(self.reduced_x_limit):
+
+            # Print for the TESTING case
+            if self.testing_mode:
+                print(f"Computing reduced AP40 in interval {x_limit}, which is {i+1} out of {len(self.reduced_x_limit)}...")
+
+            # Create empty lists for precision and recall
+            precisions_reduced = []
+            recalls_reduced = []
+            # Compute the precision and recall for the scan.
+            # Do it for each value inside the list "self.iou_threshold_list" to have more data
+            for iou_value in self.iou_threshold_list:
+                precision, recall = self.compute_precision_recall(iou_value, x_limit)
+                precisions_reduced.append(precision)
+                recalls_reduced.append(recall)
+            # Aggregate all precision-recall values into a single curve
+            precisions_reduced = np.array(sorted(precisions_reduced, reverse=True))
+            recalls_reduced = np.array(sorted(recalls_reduced))
+            # Compute AP40
+            ap40_reduced = self.compute_ap40(precisions_reduced, recalls_reduced)
+            # Append everything to the corresponding array
+            precisions_reduced_array.append(precisions_reduced.tolist())
+            recalls_reduced_array.append(recalls_reduced.tolist())
+            ap_40_reduced_array.append(ap40_reduced)
+
+        # Print for the TESTING case
+        if self.testing_mode:
+            print("--------------------------------------------------------------------\n\n")
 
 
 
@@ -379,8 +427,8 @@ class MinervaMetricLidar(BaseMetric):
 
         ############################################# SAVE DICTIONARY #############################################
         
-        # If want to save losses, add a dictionary with the right losses
-        if self.save_losses_on_file:
+        # If want to save losses when VALIDATING, add a dictionary with the right losses
+        if self.save_losses_on_file and not self.testing_mode:
             # Group the last training dictionary
             original_dict_list = self.handler.read_json_file()
             updated_dict_list = group_training_dictionaries(original_dict_list)
@@ -396,10 +444,27 @@ class MinervaMetricLidar(BaseMetric):
                 'ap40_iou_thr_list': self.iou_threshold_list.tolist(),
                 'precisions_list': precisions.tolist(),
                 'recalls_list': recalls.tolist(),
-                'ap40_reduced': ap40_reduced,
-                'precisions_list_reduced': precisions_reduced.tolist(),
-                'recalls_list_reduced': recalls_reduced.tolist()}
-            )
+                'ap40_reduced_array': ap_40_reduced_array,
+                'reduced_x_limit_array': self.reduced_x_limit,
+                'precisions_reduced_array': precisions_reduced_array,
+                'recalls_reduced_array': recalls_reduced_array})
+        # If instead want losses when TESTING, save losses in a different way
+        elif self.testing_mode:
+            # Standard dictionary
+            self.handler.add_dictionary(
+                {'type': "validation",
+                'cls_loss': loss_cls,
+                'bbox_loss': loss_bbox,
+                'dir_loss': loss_dir,
+                'total_loss': loss_general,
+                'ap40': ap40,
+                'ap40_iou_thr_list': self.iou_threshold_list.tolist(),
+                'precisions_list': precisions.tolist(),
+                'recalls_list': recalls.tolist(),
+                'ap40_reduced_array': ap_40_reduced_array,
+                'reduced_x_limit_array': self.reduced_x_limit,
+                'precisions_reduced_array': precisions_reduced_array,
+                'recalls_reduced_array': recalls_reduced_array})
 
 
 
@@ -410,14 +475,20 @@ class MinervaMetricLidar(BaseMetric):
                     "Results for the validation dataset:\n\n" \
                     "\t(Method)\t(Metric)\t(Threshold)\t(Value)\n"
         post_print = "\n----------------------------------------------------------------------------\n"
-        print_log(f"{pre_print}"\
-            f"\tAP40\t\t3D metric\t[{self.start_iou:.2f} : {self.end_iou:.2f}]\t{ap40:.4f}\n"\
-            f"\tAP40_reduced\t3D metric\t (same)\t\t{ap40_reduced:.4f}\t   reduction: [{self.reduced_x_limit[0]};{self.reduced_x_limit[1]}]\n"
-            f"\tLoss_cls\t\t\t   /\t\t{loss_cls:.4f}\n"\
-            f"\tLoss_bbox\t\t\t   /\t\t{loss_bbox:.4f}\n"\
-            f"\tLoss_dir\t\t\t   /\t\t{loss_dir:.4f}\n"\
-            f"\tLoss\t\tTotal\t\t   /\t\t{loss_general:.4f}"\
-            f"{post_print}", logger=logger)
+
+        # Build the message
+        print_message = pre_print + \
+                        f"\tAP40\t\t3D metric\t[{self.start_iou:.2f} : {self.end_iou:.2f}]\t{ap40:.4f}\n"
+        for i in range(len(self.reduced_x_limit) - 1, -1, -1):
+            print_message += f"\tAP40_reduced\t3D metric\t (same)\t\t{ap_40_reduced_array[i]:.4f}\t   reduction: [{self.reduced_x_limit[i][0]};{self.reduced_x_limit[i][1]}]\n"
+        print_message = print_message + f"\tLoss_cls\t\t\t   /\t\t{loss_cls:.4f}\n" + \
+                                        f"\tLoss_bbox\t\t\t   /\t\t{loss_bbox:.4f}\n" + \
+                                        f"\tLoss_dir\t\t\t   /\t\t{loss_dir:.4f}\n" + \
+                                        f"\tLoss\t\tTotal\t\t   /\t\t{loss_general:.4f}" + \
+                                        post_print
+
+        # Print on the logger
+        print_log(print_message, logger=logger)
 
         # Reset the parameter self.bboxes for next validation cycle
         self.bboxes = []
@@ -571,7 +642,7 @@ class MinervaMetricFusion(BaseMetric):
                  '/home/michele/code/michele_mmdet3d/work_dirs/pointpillars_minerva/last_checkpoint',
                  save_losses_on_file = False,                                   # Added argument to save the losses on a .json file
                  losses_file_destination_path = None,                           # Added argument to save the losses on a .json file
-                 reduced_x_limit = [-40, 80],                                   # To count less false negatives (when gt_bbox is too far)
+                 reduced_x_limit = [[-40, 80]],                                 # To count less false negatives (when gt_bbox is too far)
                  
                  delete_checkpoints = False,            # Added to delete checkpoints if too
                  checkpoints_folder = None,             # Added to delete checkpoints if too big
@@ -584,7 +655,7 @@ class MinervaMetricFusion(BaseMetric):
                             ##  "test_evaluator" config.                       ##
                             ##                                                 ##
                             #####################################################
-                 
+
                  ) -> None:
         self.default_prefix = 'MinervaFusion'
         super(MinervaMetricFusion, self).__init__(
@@ -764,20 +835,28 @@ class MinervaMetricFusion(BaseMetric):
 
         ############################################# REDUCED AP40 #############################################
 
-        # Create empty lists for precision and recall
-        precisions_reduced = []
-        recalls_reduced = []
-        # Compute the precision and recall for the scan.
-        # Do it for each value inside the list "self.iou_threshold_list" to have more data
-        for iou_value in self.iou_threshold_list:
-            precision, recall = self.compute_precision_recall(iou_value, self.reduced_x_limit)
-            precisions_reduced.append(precision)
-            recalls_reduced.append(recall)
-        # Aggregate all precision-recall values into a single curve
-        precisions_reduced = np.array(sorted(precisions_reduced, reverse=True))
-        recalls_reduced = np.array(sorted(recalls_reduced))
-        # Compute AP40
-        ap40_reduced = self.compute_ap40(precisions_reduced, recalls_reduced)
+        precisions_reduced_array = []
+        recalls_reduced_array = []
+        ap_40_reduced_array = []
+        for x_limit in self.reduced_x_limit:
+            # Create empty lists for precision and recall
+            precisions_reduced = []
+            recalls_reduced = []
+            # Compute the precision and recall for the scan.
+            # Do it for each value inside the list "self.iou_threshold_list" to have more data
+            for iou_value in self.iou_threshold_list:
+                precision, recall = self.compute_precision_recall(iou_value, x_limit)
+                precisions_reduced.append(precision)
+                recalls_reduced.append(recall)
+            # Aggregate all precision-recall values into a single curve
+            precisions_reduced = np.array(sorted(precisions_reduced, reverse=True))
+            recalls_reduced = np.array(sorted(recalls_reduced))
+            # Compute AP40
+            ap40_reduced = self.compute_ap40(precisions_reduced, recalls_reduced)
+            # Append everything to the corresponding array
+            precisions_reduced_array.append(precisions_reduced.tolist())
+            recalls_reduced_array.append(recalls_reduced.tolist())
+            ap_40_reduced_array.append(ap40_reduced)
 
 
 
@@ -818,9 +897,10 @@ class MinervaMetricFusion(BaseMetric):
                 'ap40_iou_thr_list': self.iou_threshold_list.tolist(),
                 'precisions_list': precisions.tolist(),
                 'recalls_list': recalls.tolist(),
-                'ap40_reduced': ap40_reduced,
-                'precisions_list_reduced': precisions_reduced.tolist(),
-                'recalls_list_reduced': recalls_reduced.tolist()}
+                'ap40_reduced_array': ap_40_reduced_array,
+                'reduced_x_limit_array': self.reduced_x_limit,
+                'precisions_reduced_array': precisions_reduced_array,
+                'recalls_reduced_array': recalls_reduced_array}
             )
 
 
@@ -832,14 +912,20 @@ class MinervaMetricFusion(BaseMetric):
                     "Results for the validation dataset:\n\n" \
                     "\t(Method)\t(Metric)\t(Threshold)\t(Value)\n"
         post_print = "\n----------------------------------------------------------------------------\n"
-        print_log(f"{pre_print}"\
-            f"\tAP40\t\t3D metric\t[{self.start_iou:.2f} : {self.end_iou:.2f}]\t{ap40:.4f}\n"\
-            f"\tAP40_reduced\t3D metric\t (same)\t\t{ap40_reduced:.4f}\t   reduction: [{self.reduced_x_limit[0]};{self.reduced_x_limit[1]}]\n"
-            f"\tLoss_cls\t\t\t   /\t\t{loss_cls:.4f}\n"\
-            f"\tLoss_bbox\t\t\t   /\t\t{loss_bbox:.4f}\n"\
-            f"\tLoss_dir\t\t\t   /\t\t{loss_dir:.4f}\n"\
-            f"\tLoss\t\tTotal\t\t   /\t\t{loss_general:.4f}"\
-            f"{post_print}", logger=logger)
+
+        # Build the message
+        print_message = pre_print + \
+                        f"\tAP40\t\t3D metric\t[{self.start_iou:.2f} : {self.end_iou:.2f}]\t{ap40:.4f}\n"
+        for i in range(len(self.reduced_x_limit) - 1, -1, -1):
+            print_message += f"\tAP40_reduced\t3D metric\t (same)\t\t{ap_40_reduced_array[i]:.4f}\t   reduction: [{self.reduced_x_limit[i][0]};{self.reduced_x_limit[i][1]}]\n"
+        print_message = print_message + f"\tLoss_cls\t\t\t   /\t\t{loss_cls:.4f}\n" + \
+                                        f"\tLoss_bbox\t\t\t   /\t\t{loss_bbox:.4f}\n" + \
+                                        f"\tLoss_dir\t\t\t   /\t\t{loss_dir:.4f}\n" + \
+                                        f"\tLoss\t\tTotal\t\t   /\t\t{loss_general:.4f}" + \
+                                        post_print
+
+        # Print on the logger
+        print_log(print_message, logger=logger)
 
         # Reset the parameter self.bboxes for next validation cycle
         self.bboxes = []
