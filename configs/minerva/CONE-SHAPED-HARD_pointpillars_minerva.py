@@ -403,7 +403,7 @@ test_evaluator = dict(
     #   - insert the checkpoint in a direct way (not going through the "last_checkpoint.txt" file)
     #   - save the results in a different file
     testing_mode = True,
-    testing_reference_folder = "/home/michele/code/Presentation_results/PPillars_Checkpoints/Cone-Augmented-Only_HardVox/",
+    testing_reference_folder = "/home/michele/code/Presentation_results/PPillars_Checkpoints/Cone-Shaped_HardVox/",
     type='MinervaMetricLidar')
 test_pipeline = [
     dict(coord_type='LIDAR', load_dim=4, type='LoadPointsFromFile', use_dim=4),
