@@ -23,7 +23,7 @@
 dataset_type = 'MinervaCameraLidarDataset'
 data_root = 'data/minerva_polimove/'
 class_names = ['Car']
-point_cloud_range = [0, -24, -2, 128, 24, 4.8]                  ## How to adjust? Use "tools/misc/browse_datase.py" after setting 
+point_cloud_range = [0, -25.6, -2, 138.24, 25.6, 4.8]           ## How to adjust? Use "tools/misc/browse_datase.py" after setting 
                                                                 #  the line "PointsRangeFilter" in test_pipeline to NON-commented
 input_modality = dict(use_lidar=True, use_camera=True)
 metainfo = dict(classes=class_names)

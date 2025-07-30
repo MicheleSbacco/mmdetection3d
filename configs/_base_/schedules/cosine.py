@@ -13,22 +13,22 @@ param_scheduler = [
     dict(
         type='CosineAnnealingLR',
         begin=0,
-        T_max=100,
-        end=100,
+        T_max=180,
+        end=180,
         by_epoch=True,
         eta_min=1e-5),
     dict(
         type='CosineAnnealingLR',
-        begin=100,
-        T_max=50,
-        end=150,
+        begin=180,
+        T_max=60,
+        end=240,
         by_epoch=True,
         eta_min=1e-6),
     dict(
         type='CosineAnnealingLR',
-        begin=150,
-        T_max=50,
-        end=200,
+        begin=240,
+        T_max=60,
+        end=300,
         by_epoch=True,
         eta_min=1e-7)
 ]

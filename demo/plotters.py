@@ -1,7 +1,10 @@
 import matplotlib.pyplot as plt
 from scipy.stats import norm
 import numpy as np
-import matplotlib.cm as cm
+plt.rcParams['font.family'] = 'DejaVu Serif'
+
+
+
 
 
 
@@ -27,6 +30,9 @@ def freq_plot_with_variance(values, title="Frequency Plot with Gaussian", column
     plt.yticks(fontsize=12)
     plt.grid(True)
     plt.show()
+
+
+
 
 
 
@@ -59,6 +65,9 @@ def freq_plot_with_gaussian(values, title="Frequency Plot with Gaussian", column
 
 
 
+
+
+
 def plot_pie_chart(values_1, values_2, values_3, label_1, label_2, label_3):
     average_value1 = sum(values_1) / len(values_1)
     average_value2 = sum(values_2) / len(values_2)
@@ -78,7 +87,12 @@ def plot_pie_chart(values_1, values_2, values_3, label_1, label_2, label_3):
 
 
 
-def plot_losses_metrics(epochs, training_losses, validation_losses, metric_ap40, metric_ap40_reduced_array, reduced_x_limit_array, list_of_reductions_shown=[0], top_y_lim = None, x_lim=None):
+
+
+
+def plot_losses_metrics(epochs, training_losses, validation_losses, metric_ap40, metric_ap40_reduced_array, 
+                        reduced_x_limit_array, list_of_reductions_shown=[0], top_y_lim = None, x_lim=None,
+                        wanna_annotate = True, best_epoch = None):
 
     # Define the number of colors
     num_of_colors = len(list_of_reductions_shown)+2
@@ -87,8 +101,14 @@ def plot_losses_metrics(epochs, training_losses, validation_losses, metric_ap40,
     for i in range(num_of_colors-1, -1, -1):
         color_map.append( (i / (num_of_colors - 1), 0, 0) )
 
-    # Plot the training and validation losses
+    # Create the figure
     plt.figure(figsize=(15, 10))
+
+    # Plot the best epoch if requested
+    if best_epoch is not None:
+        plt.axvline(x=best_epoch, color='magenta', linestyle='--', linewidth=2, label='Best Epoch')
+    
+    # Plot the training and validation losses
     plt.plot(epochs, training_losses, color='black', marker='o', label='Training Loss')  # Black line for training
     plt.plot(epochs, validation_losses, color='#32CD32', marker='o', label='Validation Loss')  # Green line for validation
 
@@ -107,68 +127,78 @@ def plot_losses_metrics(epochs, training_losses, validation_losses, metric_ap40,
     plt.grid(True)
 
     # Fontsizes
-    fontsize_titles = 16
+    fontsize_titles = 20
     fontsize_annotations = 8
     superposition_upper_limit = 3
     superposition_lower_limit = 1/3
 
     # Add labels and title
-    plt.xlabel('Epochs', fontsize = fontsize_titles)
-    plt.ylabel('Metrics', fontsize = fontsize_titles)
+    plt.xlabel('Epochs', fontsize = fontsize_titles-2)
+    plt.ylabel('Metrics', fontsize = fontsize_titles-2)
     if top_y_lim is not None:
         plt.ylim(top = top_y_lim)
     if x_lim is not None:
         plt.xlim(x_lim)
-    plt.title('Training vs Validation Loss', fontsize = fontsize_titles)
+    plt.title('Loss and AP', fontsize = fontsize_titles, fontweight = 'bold')
 
-    # Add annotations for each point (training)
-    for i, loss in enumerate(training_losses):
-        plt.annotate(f'{loss:.2f}', (epochs[i], training_losses[i]), textcoords="offset points", xytext=(-8,-5), ha='center', fontsize=fontsize_annotations, color='black')
+    if wanna_annotate:
+        # Add annotations for each point (training)
+        for i, loss in enumerate(training_losses):
+            plt.annotate(f'{loss:.2f}', (epochs[i], training_losses[i]), textcoords="offset points", xytext=(-8,-5), ha='center', fontsize=fontsize_annotations, color='black')
 
-    # Add annotations for each point (validation)
-    for i, loss in enumerate(validation_losses):
-        plt.annotate(f'{loss:.2f}', (epochs[i], validation_losses[i]), textcoords="offset points", xytext=(-8, 5), ha='center', fontsize=fontsize_annotations, color='#32CD32')
+        # Add annotations for each point (validation)
+        for i, loss in enumerate(validation_losses):
+            plt.annotate(f'{loss:.2f}', (epochs[i], validation_losses[i]), textcoords="offset points", xytext=(-8, 5), ha='center', fontsize=fontsize_annotations, color='#32CD32')
 
-    # Add annotations for each point (ap40 metric)
-    for i, ap40 in enumerate(metric_ap40):
-        if (ap40/training_losses[i]>superposition_upper_limit or ap40/training_losses[i]<superposition_lower_limit) and (ap40/validation_losses[i]>superposition_upper_limit or ap40/validation_losses[i]<superposition_lower_limit):
-            plt.annotate(f'{ap40:.2f}', (epochs[i], metric_ap40[i]), textcoords="offset points", xytext=(0,-10), ha='center', fontsize=fontsize_annotations, color='blue')
-        else:
-            plt.annotate(f'', (epochs[i], metric_ap40[i]))
+        # Add annotations for each point (ap40 metric)
+        for i, ap40 in enumerate(metric_ap40):
+            if (ap40/training_losses[i]>superposition_upper_limit or ap40/training_losses[i]<superposition_lower_limit) and (ap40/validation_losses[i]>superposition_upper_limit or ap40/validation_losses[i]<superposition_lower_limit):
+                plt.annotate(f'{ap40:.2f}', (epochs[i], metric_ap40[i]), textcoords="offset points", xytext=(0,-10), ha='center', fontsize=fontsize_annotations, color='blue')
+            else:
+                plt.annotate(f'', (epochs[i], metric_ap40[i]))
 
-    # Add annotations for each point (first element of the ap40_reduced metric)
-    for i, ap40_r in enumerate(metric_ap40_reduced_array[:, 0].tolist()):
-        if (ap40_r/training_losses[i]>superposition_upper_limit or ap40_r/training_losses[i]<superposition_lower_limit) and (ap40_r/validation_losses[i]>superposition_upper_limit or ap40_r/validation_losses[i]<superposition_lower_limit):
-            plt.annotate(f'{ap40_r:.2f}', (epochs[i], metric_ap40_reduced_array[:, 0].tolist()[i]), textcoords="offset points", xytext=(0,-10), ha='center', fontsize=fontsize_annotations, color=color_map[0])
-        else:
-            plt.annotate(f'', (epochs[i], metric_ap40[i]))
+        # Add annotations for each point (first element of the ap40_reduced metric)
+        for i, ap40_r in enumerate(metric_ap40_reduced_array[:, 0].tolist()):
+            if (ap40_r/training_losses[i]>superposition_upper_limit or ap40_r/training_losses[i]<superposition_lower_limit) and (ap40_r/validation_losses[i]>superposition_upper_limit or ap40_r/validation_losses[i]<superposition_lower_limit):
+                plt.annotate(f'{ap40_r:.2f}', (epochs[i], metric_ap40_reduced_array[:, 0].tolist()[i]), textcoords="offset points", xytext=(0,-10), ha='center', fontsize=fontsize_annotations, color=color_map[0])
+            else:
+                plt.annotate(f'', (epochs[i], metric_ap40[i]))
 
-    # Add annotations for each point (last element of the ap40_reduced metric)
-    for i, ap40_r in enumerate(metric_ap40_reduced_array[:, list_of_reductions_shown[-1]].tolist()):
-        if (ap40_r/training_losses[i]>superposition_upper_limit or ap40_r/training_losses[i]<superposition_lower_limit) and (ap40_r/validation_losses[i]>superposition_upper_limit or ap40_r/validation_losses[i]<superposition_lower_limit):
-            plt.annotate(f'{ap40_r:.2f}', (epochs[i], metric_ap40_reduced_array[:, list_of_reductions_shown[-1]].tolist()[i]), textcoords="offset points", xytext=(0,-10), ha='center', fontsize=fontsize_annotations, color=color_map[len(list_of_reductions_shown)-1])
-        else:
-            plt.annotate(f'', (epochs[i], metric_ap40[i]))
+        # Add annotations for each point (last element of the ap40_reduced metric)
+        for i, ap40_r in enumerate(metric_ap40_reduced_array[:, list_of_reductions_shown[-1]].tolist()):
+            if (ap40_r/training_losses[i]>superposition_upper_limit or ap40_r/training_losses[i]<superposition_lower_limit) and (ap40_r/validation_losses[i]>superposition_upper_limit or ap40_r/validation_losses[i]<superposition_lower_limit):
+                plt.annotate(f'{ap40_r:.2f}', (epochs[i], metric_ap40_reduced_array[:, list_of_reductions_shown[-1]].tolist()[i]), textcoords="offset points", xytext=(0,-10), ha='center', fontsize=fontsize_annotations, color=color_map[len(list_of_reductions_shown)-1])
+            else:
+                plt.annotate(f'', (epochs[i], metric_ap40[i]))
 
     # Show the legend
-    plt.legend(fontsize = fontsize_titles-2)
+    # plt.legend(fontsize=fontsize_titles-2)
+
+    print(f"AP total:\n\t{metric_ap40[best_epoch-1]}")
+    for i, index in enumerate(list_of_reductions_shown):
+        print(f"AP in {reduced_x_limit_array[i]}:\n\t{metric_ap40_reduced_array[best_epoch-1, index]}")
 
     # Display the plot
     plt.show()
 
 
 
-def plot_precision_recall_curve(epoch, precisions, recalls, precisions_reduced, recalls_reduced, iou_thr_list):
+
+
+
+def plot_precision_recall_curve(epoch, precisions, recalls, precisions_reduced, recalls_reduced, iou_thr_list, wanna_annotate = True):
+
     # Plotting the precision-recall curve
     plt.figure(figsize=(12, 12))
-    plt.plot(recalls, precisions, marker='o', linestyle='-', color='k', label=f"P-R curve for AP40 at epoch {epoch}")
-    plt.plot(recalls_reduced, precisions_reduced, marker='o', linestyle='-', color='g', label=f"P-R curve for AP40$_{{\\mathrm{{reduced}}}}$ at epoch {epoch}")
-    
-    # Annotate the IoU threshold values
-    for i, thr in enumerate(iou_thr_list):
-        # AP40_reduced
-        if i == 0 or (recalls_reduced[i] != recalls_reduced[i-1]) or (precisions_reduced[i] != precisions_reduced[i-1]):
-            plt.annotate(f'{(100*thr):.1f}', (recalls_reduced[i], precisions_reduced[i]), textcoords="offset points", xytext=(12,5), ha='center', fontsize=10, color='blue')
+    plt.plot(recalls, precisions, marker='o', linestyle='-', color='k', label=f"P-R curve for AP at epoch {epoch}")
+    plt.plot(recalls_reduced, precisions_reduced, marker='o', linestyle='-', color='g', label=f"P-R curve for AP$_{{\\mathrm{{[0m; 70m]}}}}$ at epoch {epoch}")
+
+    if wanna_annotate:
+        # Annotate the IoU threshold values
+        for i, thr in enumerate(iou_thr_list):
+            # AP40_reduced
+            if i == 0 or (recalls_reduced[i] != recalls_reduced[i-1]) or (precisions_reduced[i] != precisions_reduced[i-1]):
+                plt.annotate(f'{(100*thr):.1f}', (recalls_reduced[i], precisions_reduced[i]), textcoords="offset points", xytext=(12,5), ha='center', fontsize=10, color='blue')
 
     # Set x and y axis limits dynamically
     max_recall = max(max(recalls), max(recalls_reduced))
@@ -176,13 +206,13 @@ def plot_precision_recall_curve(epoch, precisions, recalls, precisions_reduced, 
     limit_overall = max(max_precision, max_recall)*1.1
     plt.xlim([0, limit_overall])
     plt.ylim([0, limit_overall])
-    
+
     # Adding labels, title, and grid
-    plt.xlabel('Recall', fontsize = 16)
-    plt.ylabel('Precision', fontsize = 16)
-    plt.title('Precision-Recall Curve', fontsize = 16)
-    plt.legend(fontsize = 14)
+    plt.xlabel('Recall', fontsize = 18)
+    plt.ylabel('Precision', fontsize = 18)
+    plt.title('Precision-Recall Curve', fontsize = 20, fontweight = 'bold')
+    plt.legend(fontsize = 18)
     plt.grid(True)
-    
+
     # Display the plot
     plt.show()

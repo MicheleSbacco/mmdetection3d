@@ -437,7 +437,7 @@ test_pipeline = [
         'points',
     ], type='Pack3DDetInputs'),
 ]
-train_cfg = dict(by_epoch=True, max_epochs=80, val_interval=1)
+train_cfg = dict(by_epoch=True, max_epochs=120, val_interval=1)
 train_dataloader = dict(
     batch_size=2,
     dataset=dict(
